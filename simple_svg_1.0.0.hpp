@@ -178,7 +178,7 @@ namespace svg
     {
     public:
         enum Defaults { Transparent = -1, Aqua, Black, Blue, Brown, Cyan, Fuchsia,
-            Green, Lime, Magenta, Orange, Purple, Red, Silver, White, Yellow };
+            Green, Lime, Magenta, Orange, Purple, Red, Silver, White, Yellow, Random };
 
         Color(int r, int g, int b) : transparent(false), red(r), green(g), blue(b) { }
         Color(Defaults color)
@@ -201,6 +201,7 @@ namespace svg
                 case Silver: assign(192, 192, 192); break;
                 case White: assign(255, 255, 255); break;
                 case Yellow: assign(255, 255, 0); break;
+                case Random: assign(rand() % 256, rand() % 256, rand() % 256); break;
                 default: transparent = true; break;
             }
         }
