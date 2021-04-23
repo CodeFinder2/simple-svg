@@ -2,7 +2,7 @@
 *  The "New BSD License" : http://www.opensource.org/licenses/bsd-license.php  *
 ********************************************************************************
 
-Copyright (c) 2010, Mark Turney
+Copyright (c) 2010, Mark Turney, Copyright (c) 2020-2021, Adrian Böckenkamp
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
