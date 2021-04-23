@@ -36,6 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <algorithm>
 #include <cstdlib>
 #include <ctime>
 
@@ -324,11 +325,21 @@ namespace svg
     class Shape : public Serializeable
     {
     public:
-        Shape(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : fill(fill), stroke(stroke) { }
+        Shape(Fill const & fill = Fill(), Stroke const & stroke = Stroke(), int z_order = 0)
+            : fill(fill), stroke(stroke), z(z_order) { }
         virtual ~Shape() { }
         virtual std::string toString(Layout const & layout) const = 0;
         virtual void offset(Point const & offset) = 0;
+        /**
+         * z order of SVG elements in the document. Default is zero which equals the order of insertion, that is,
+         * an element A that is inserted after an element B overlays it because A is drawn after (and possibly over) B.
+         * If all elements are zero, the default library behavior is applied (according to the SVG standard) and
+         * elements are not reordered before they are written to the SVG file.
+         * Elements (aka Shape's) with a smaller (and also possibly a negative) `z` are added/drawn before others with a larger z.
+         * That means, if you want an element A to be above/over an element B, set something like A.z > B.z. Alternatively, set
+         * A.z = B.z (or simply don't change it at all but then you have to ensure to add B *first*, then A.
+         */
+        int z;
     protected:
         Fill fill;
         Stroke stroke;
@@ -700,20 +711,21 @@ namespace svg
     public:
         Document() {};
         Document(std::string const & file_name, Layout layout = Layout())
-            : file_name(file_name), layout(layout) { }
+            : file_name(file_name), layout(layout), needs_sorting(false) { }
 
         Document & operator<<(Shape const & shape)
         {
-            body_nodes_str_list.push_back(shape.toString(layout));
+            body_nodes_str_list.push_back(std::make_pair(shape.z, shape.toString(layout)));
+            needs_sorting = needs_sorting || shape.z != 0;
             return *this;
         }
-        std::string toString() const
+        std::string toString()
         {
             std::stringstream ss;
             writeToStream(ss);
             return ss.str();
         }
-        bool save() const
+        bool save()
         {
             std::ofstream ofs(file_name.c_str());
             if (!ofs.good())
@@ -724,7 +736,7 @@ namespace svg
             return true;
         }
     private:
-        void writeToStream(std::ostream& str) const
+        void writeToStream(std::ostream& str)
         {
             str << "<?xml " << attribute("version", "1.0") << attribute("standalone", "no")
                 << "?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" "
@@ -733,8 +745,14 @@ namespace svg
                 << attribute("height", layout.dimensions.height, "px")
                 << attribute("xmlns", "http://www.w3.org/2000/svg")
                 << attribute("version", "1.1") << ">\n";
+            if (needs_sorting) {
+                std::stable_sort(body_nodes_str_list.begin(), body_nodes_str_list.end(),
+                          [](const std::pair<int, std::string> &a, const std::pair<int, std::string> &b){
+                    return a.first < b.first; // decending order rgd. z, keep equal z's (especially the default z=0) in the order of insertions
+                });
+            }
             for (const auto& body_node_str : body_nodes_str_list) {
-                str << body_node_str;
+                str << body_node_str.second;
             }
             str << elemEnd("svg");
         }
@@ -743,7 +761,8 @@ namespace svg
         std::string file_name;
         Layout layout;
 
-        std::vector<std::string> body_nodes_str_list;
+        std::vector<std::pair<int, std::string>> body_nodes_str_list;
+        bool needs_sorting;
     };
 }
 
