@@ -44,6 +44,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace svg
 {
+    // Version information.
+    inline std::string libraryVersion() { return "1.0.0"; }
+    inline std::string svgVersion() { return "1.1"; }
+
     // Utility XML/String Functions.
     template <typename T>
     inline std::string attribute(std::string const & attribute_name,

@@ -1,7 +1,7 @@
 project (simple-svg)
 cmake_minimum_required(VERSION 2.8)
 
-add_executable(simple_svg main_1.0.0.cpp simple_svg_1.0.0.hpp)
+add_executable(simple_svg main_1.0.0.cpp simple_svg.hpp)
 
 set_property(TARGET simple_svg PROPERTY CXX_STANDARD 11)
 
