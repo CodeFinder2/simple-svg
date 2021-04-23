@@ -258,8 +258,12 @@ namespace svg
     class Stroke : public Serializeable
     {
     public:
-        Stroke(double width = -1, Color color = Color::Transparent, bool nonScalingStroke = false)
-            : width(width), color(color), nonScaling(nonScalingStroke) { }
+        Stroke(double width = -1, Color color = Color::Transparent, bool nonScalingStroke = false,
+               double stroke_miterlimit = -1, std::vector<unsigned> stroke_dasharray = {},
+               unsigned int stroke_dashoffset = 0, double stroke_opacity = 1.0)
+            : width(width), color(color), nonScaling(nonScalingStroke),
+            miterlimit(stroke_miterlimit), dasharray(stroke_dasharray),
+            dashoffset(stroke_dashoffset), opacity(stroke_opacity) { }
         std::string toString(Layout const & layout) const
         {
             // If stroke width is invalid.
@@ -267,7 +271,27 @@ namespace svg
                 return std::string();
 
             std::stringstream ss;
-            ss << attribute("stroke-width", translateScale(width, layout)) << attribute("stroke", color.toString(layout));
+            ss << attribute("stroke-width", translateScale(width, layout))
+               << attribute("stroke", color.toString(layout));
+            if (miterlimit >= 0) {
+                ss << attribute("stroke-miterlimit", translateScale(miterlimit, layout));
+            }
+            if (dashoffset >= 0) {
+                ss << attribute("stroke-dashoffset", translateScale(dashoffset, layout));
+            }
+            std::stringstream tmp;
+            for (size_t i = 0; i < dasharray.size(); ++i) {
+                tmp << dasharray[i];
+                if (i + 1 < dasharray.size()) {
+                    tmp << ",";
+                }
+            }
+            if (!dasharray.empty()) {
+                ss << attribute("stroke-dasharray", tmp.str());
+            }
+            if (opacity < 1.0) {
+                ss << attribute("stroke-opacity", opacity);
+            }
             if (nonScaling)
                ss << attribute("vector-effect", "non-scaling-stroke");
             return ss.str();
@@ -276,6 +300,10 @@ namespace svg
         double width;
         Color color;
         bool nonScaling;
+        double miterlimit;
+        std::vector<unsigned> dasharray;
+        unsigned dashoffset;
+        double opacity; // in [0, 1], 1 = fully visible, 0 = fully transparent
     };
 
     class Font : public Serializeable
