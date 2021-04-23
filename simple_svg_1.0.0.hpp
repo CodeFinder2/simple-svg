@@ -36,6 +36,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <cstdlib>
+#include <ctime>
 
 #include <iostream>
 
@@ -201,7 +203,14 @@ namespace svg
                 case Silver: assign(192, 192, 192); break;
                 case White: assign(255, 255, 255); break;
                 case Yellow: assign(255, 255, 0); break;
-                case Random: assign(rand() % 256, rand() % 256, rand() % 256); break;
+                case Random:
+                  static bool srand_init = false;
+                  if (!srand_init) {
+                      srand(time(nullptr));
+                      srand_init = true;
+                  }
+                  assign(rand() % 256, rand() % 256, rand() % 256);
+                  break;
                 default: transparent = true; break;
             }
         }
