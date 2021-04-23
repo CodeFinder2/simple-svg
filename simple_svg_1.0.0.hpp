@@ -504,9 +504,9 @@ namespace svg
     {
     public:
        Path(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-          : Shape(fill, stroke) 
+          : Shape(fill, stroke)
        {  startNewSubPath(); }
-       Path(Stroke const & stroke = Stroke()) : Shape(Color::Transparent, stroke) 
+       Path(Stroke const & stroke = Stroke()) : Shape(Color::Transparent, stroke)
        {  startNewSubPath(); }
        Path & operator<<(Point const & point)
        {
