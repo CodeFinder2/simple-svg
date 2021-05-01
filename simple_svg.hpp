@@ -714,7 +714,7 @@ namespace svg
     class Document
     {
     public:
-        Document() {};
+        Document() { }
         Document(std::string const & file_name, Layout layout = Layout())
             : file_name(file_name), layout(layout), needs_sorting(false) { }
 
@@ -733,12 +733,11 @@ namespace svg
         bool save()
         {
             std::ofstream ofs(file_name.c_str());
-            if (!ofs.good())
+            if (!ofs.is_open())
                 return false;
 
             writeToStream(ofs);
-            ofs.close();
-            return true;
+            return ofs.good();
         }
     private:
         void writeToStream(std::ostream& str)
