@@ -58,9 +58,9 @@ namespace svg
         ss << attribute_name << "=\"" << value << unit << "\" ";
         return ss.str();
     }
-    inline std::string elemStart(std::string const & element_name)
+    inline std::string elemStart(std::string const & element_name, bool single = false)
     {
-        return "\t<" + element_name + " ";
+        return "\t<" + element_name + (single ? ">\n" : " ");
     }
     inline std::string elemEnd(std::string const & element_name)
     {
