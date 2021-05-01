@@ -89,8 +89,17 @@ namespace svg
 
             return &type;
         }
+        const T * operator->() const
+        {
+            // If we try to access an invalid value, an exception is thrown.
+            if (!valid)
+                throw std::exception();
+
+            return &type;
+        }
         // Test for validity.
         bool operator!() const { return !valid; }
+        operator bool() const { return valid; }
     private:
         bool valid;
         T type;
