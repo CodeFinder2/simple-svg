@@ -510,6 +510,8 @@ namespace svg
     public:
         Polygon(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
             : Shape(fill, stroke) { }
+        Polygon(const std::vector<Point> &pts, Fill const & fill = Fill(), Stroke const & stroke = Stroke())
+            : points(pts), Shape(fill, stroke) { }
         Polygon(Stroke const & stroke = Stroke()) : Shape(Color::Transparent, stroke) { }
         Polygon & operator<<(Point const & point)
         {
