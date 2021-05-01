@@ -45,6 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace svg
 {
     // Version information.
+    inline std::string libraryName() { return "SimpleSVG"; }
     inline std::string libraryVersion() { return "1.0.0"; }
     inline std::string svgVersion() { return "1.1"; }
 
@@ -742,13 +743,14 @@ namespace svg
     private:
         void writeToStream(std::ostream& str)
         {
-            str << "<?xml " << attribute("version", "1.0") << attribute("standalone", "no")
-                << "?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" "
+            str << "<?xml " << attribute("version", "1.0") << attribute("standalone", "no") << "?>\n"
+                << "<!-- Generator: " << libraryName() << " (https://github.com/CodeFinder2/simple-svg), Version: " << libraryVersion() << " -->\n"
+                << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG " << svgVersion() << "//EN\" "
                 << "\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n<svg "
                 << attribute("width", layout.dimensions.width, "px")
                 << attribute("height", layout.dimensions.height, "px")
                 << attribute("xmlns", "http://www.w3.org/2000/svg")
-                << attribute("version", "1.1") << ">\n";
+                << attribute("version", svgVersion()) << ">\n";
             if (needs_sorting) {
                 std::stable_sort(body_nodes_str_list.begin(), body_nodes_str_list.end(),
                           [](const std::pair<int, std::string> &a, const std::pair<int, std::string> &b){
