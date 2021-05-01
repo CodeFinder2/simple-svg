@@ -39,6 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <algorithm>
 #include <cstdlib>
 #include <ctime>
+#include <memory>
 
 #include <iostream>
 
@@ -69,6 +70,11 @@ namespace svg
     inline std::string emptyElemEnd()
     {
         return "/>\n";
+    }
+
+    template<typename T, typename... Args>
+    std::unique_ptr<T> make_unique(Args&&... args) {
+        return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
     }
 
     // Quick optional return type.  This allows functions to return an invalid
@@ -344,6 +350,7 @@ namespace svg
         virtual ~Shape() { }
         virtual std::string toString(Layout const & layout) const = 0;
         virtual void offset(Point const & offset) = 0;
+        virtual std::unique_ptr<Shape> clone() const = 0;
         /**
          * z order of SVG elements in the document. Default is zero which equals the order of insertion, that is,
          * an element A that is inserted after an element B overlays it because A is drawn after (and possibly over) B.
@@ -388,6 +395,10 @@ namespace svg
             center.x += offset.x;
             center.y += offset.y;
         }
+        virtual std::unique_ptr<Shape> clone() const override
+        {
+            return svg::make_unique<Circle>(*this);
+        }
     private:
         Point center;
         double radius;
@@ -414,6 +425,10 @@ namespace svg
         {
             center.x += offset.x;
             center.y += offset.y;
+        }
+        virtual std::unique_ptr<Shape> clone() const override
+        {
+            return svg::make_unique<Elipse>(*this);
         }
     private:
         Point center;
@@ -442,6 +457,10 @@ namespace svg
         {
             edge.x += offset.x;
             edge.y += offset.y;
+        }
+        virtual std::unique_ptr<Shape> clone() const override
+        {
+            return svg::make_unique<Rectangle>(*this);
         }
     private:
         Point edge;
@@ -472,6 +491,10 @@ namespace svg
 
             end_point.x += offset.x;
             end_point.y += offset.y;
+        }
+        virtual std::unique_ptr<Shape> clone() const override
+        {
+            return svg::make_unique<Line>(*this);
         }
     private:
         Point start_point;
@@ -508,6 +531,10 @@ namespace svg
                 points[i].x += offset.x;
                 points[i].y += offset.y;
             }
+        }
+        virtual std::unique_ptr<Shape> clone() const override
+        {
+            return svg::make_unique<Polygon>(*this);
         }
     private:
         std::vector<Point> points;
@@ -565,6 +592,11 @@ namespace svg
                 point.y += offset.y;
              }
        }
+
+       virtual std::unique_ptr<Shape> clone() const override
+       {
+           return svg::make_unique<Path>(*this);
+       }
     private:
        std::vector<std::vector<Point>> paths;
     };
@@ -603,6 +635,10 @@ namespace svg
                 points[i].y += offset.y;
             }
         }
+        virtual std::unique_ptr<Shape> clone() const override
+        {
+            return svg::make_unique<Polyline>(*this);
+        }
         std::vector<Point> points;
     };
 
@@ -625,6 +661,10 @@ namespace svg
         {
             origin.x += offset.x;
             origin.y += offset.y;
+        }
+        virtual std::unique_ptr<Shape> clone() const override
+        {
+            return svg::make_unique<Text>(*this);
         }
     private:
         Point origin;
@@ -662,6 +702,10 @@ namespace svg
         {
             for (unsigned i = 0; i < polylines.size(); ++i)
                 polylines[i].offset(offset);
+        }
+        virtual std::unique_ptr<Shape> clone() const override
+        {
+            return svg::make_unique<LineChart>(*this);
         }
     private:
         Stroke axis_stroke;
