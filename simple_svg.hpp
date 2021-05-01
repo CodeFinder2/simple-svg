@@ -40,6 +40,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdlib>
 #include <ctime>
 #include <memory>
+#include <set>
 
 #include <iostream>
 
@@ -365,6 +366,148 @@ namespace svg
         Fill fill;
         Stroke stroke;
     };
+
+    class Marker : public Serializeable
+    {
+    public:
+        // Creates an empty marker (no visual effect).
+        Marker() { }
+        Marker(const std::string &markerId, double markerWidth, double markerHeight, double refX, double refY,
+               const Shape &shape)
+            : id(markerId), marker_width(markerWidth), marker_height(markerHeight), ref_x(refX), ref_y(refY)
+        {
+            *this << shape;
+        }
+        Marker(const Marker &that)
+        {
+            shapes.reserve(that.shapes.size());
+            for (size_t i = 0; i < that.shapes.size(); ++i) {
+                shapes.push_back(that.shapes[i]->clone());
+            }
+            id = that.id;
+            marker_width = that.marker_width;
+            marker_height = that.marker_height;
+            ref_x = that.ref_x;
+            ref_y = that.ref_y;
+        }
+        Marker(Marker &&that)
+        {
+            shapes.reserve(that.shapes.size());
+            for (size_t i = 0; i < that.shapes.size(); ++i) {
+                shapes.push_back(std::move(that.shapes[i]));
+            }
+            that.shapes.clear();
+
+            id = that.id;
+            that.id.clear();
+            marker_width = that.marker_width;
+            marker_height = that.marker_height;
+            ref_x = that.ref_x;
+            ref_y = that.ref_y;
+        }
+        Marker& operator= (Marker &&that)
+        {
+            if (this != &that) {
+                shapes.reserve(that.shapes.size());
+                for (size_t i = 0; i < that.shapes.size(); ++i) {
+                    shapes.push_back(std::move(that.shapes[i]));
+                }
+                that.shapes.clear();
+
+                id = that.id;
+                that.id.clear();
+                marker_width = that.marker_width;
+                marker_height = that.marker_height;
+                ref_x = that.ref_x;
+                ref_y = that.ref_y;
+            }
+            return *this;
+        }
+        Marker& operator<<(const Shape &shape)
+        {
+            shapes.push_back(std::move(shape.clone()));
+            return *this;
+        }
+        std::string toString(Layout const & layout) const
+        {
+            std::stringstream ss;
+            if (valid()) { // only if not empty / defined
+                ss << "\t" << elemStart("marker")
+                   << attribute("id", id)
+                   << attribute("markerWidth", marker_width)
+                   << attribute("markerHeight", marker_height)
+                   << attribute("refX", ref_x)
+                   << attribute("refY", ref_y)
+                   << attribute("orient", "auto") << ">\n";
+                for (size_t i = 0; i < shapes.size(); ++i) {
+                    ss << "\t\t" << shapes[i]->toString(layout);
+                    if (i + 1 < shapes.size()) {
+                        ss << "\n";
+                    }
+                }
+                ss << "\t\t" << elemEnd("marker");
+            }
+            return ss.str();
+        }
+        std::string getId() const { return id; }
+        bool valid() const { return !id.empty(); }
+    private:
+        std::vector<std::unique_ptr<Shape>> shapes;
+        std::string id;
+        double marker_width;
+        double marker_height;
+        double ref_x;
+        double ref_y;
+    };
+    // TODO: handle id collisions
+
+    namespace internal {
+        auto compareMarker = [](const Marker *a, const Marker *b) { return a->getId() < b->getId(); };
+        typedef std::set<const Marker*, decltype(compareMarker)> MarkerSet;
+    }
+
+    class Markerable
+    {
+    public:
+        Markerable() : marker_start(nullptr), marker_mid(nullptr), marker_end(nullptr) { }
+        void setStartMarker(const Marker *m) { marker_start = m; }
+        void setMidMarker(const Marker *m) { marker_mid = m; }
+        void setEndMarker(const Marker *m) { marker_end = m; }
+        std::string toString(Layout const & layout) const
+        {
+            std::stringstream ss;
+            if (marker_start && marker_start->valid()) {
+                ss << "marker-start=\"url(#" << marker_start->getId() << ")\" ";
+            }
+            if (marker_mid && marker_mid->valid()) {
+                ss << "marker-mid=\"url(#" << marker_mid->getId() << ")\" ";
+            }
+            if (marker_end && marker_end->valid()) {
+                ss << "marker-end=\"url(#" << marker_end->getId() << ")\" ";
+            }
+            return ss.str();
+        }
+        internal::MarkerSet getUsedMarkers() const
+        {
+            internal::MarkerSet result(internal::compareMarker);
+            if (marker_start && marker_start->valid()) {
+                result.insert(marker_start);
+            }
+            if (marker_mid && marker_mid->valid()) {
+                result.insert(marker_mid);
+            }
+            if (marker_end && marker_end->valid()) {
+                result.insert(marker_end);
+            }
+            return result;
+        }
+
+    private:
+        const Marker *marker_start;
+        const Marker *marker_mid;
+        const Marker *marker_end;
+    };
+
     template <typename T>
     inline std::string vectorToString(std::vector<T> collection, Layout const & layout)
     {
@@ -472,7 +615,7 @@ namespace svg
         double height;
     };
 
-    class Line : public Shape
+    class Line : public Shape, public Markerable
     {
     public:
         Line(Point const & start_point, Point const & end_point, Stroke const & stroke = Stroke())
@@ -485,7 +628,7 @@ namespace svg
                << attribute("y1", translateY(start_point.y, layout))
                << attribute("x2", translateX(end_point.x, layout))
                << attribute("y2", translateY(end_point.y, layout))
-               << stroke.toString(layout) << emptyElemEnd();
+               << stroke.toString(layout) << Markerable::toString(layout) << emptyElemEnd();
             return ss.str();
         }
         void offset(Point const & offset)
@@ -607,7 +750,7 @@ namespace svg
        std::vector<std::vector<Point>> paths;
     };
 
-    class Polyline : public Shape
+    class Polyline : public Shape, public Markerable
     {
     public:
         Polyline(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
@@ -631,7 +774,8 @@ namespace svg
                 ss << translateX(points[i].x, layout) << "," << translateY(points[i].y, layout) << " ";
             ss << "\" ";
 
-            ss << fill.toString(layout) << stroke.toString(layout) << emptyElemEnd();
+            ss << fill.toString(layout) << stroke.toString(layout)
+               << Markerable::toString(layout) << emptyElemEnd();
             return ss.str();
         }
         void offset(Point const & offset)
@@ -677,6 +821,8 @@ namespace svg
         std::string content;
         Font font;
     };
+
+    // TODO: allow "text with background" via filters, see https://stackoverflow.com/a/31013492
 
     // Sample charting class.
     class LineChart : public Shape
@@ -777,8 +923,8 @@ namespace svg
 
         Document & operator<<(Shape const & shape)
         {
-            body_nodes_str_list.push_back(std::make_pair(shape.z, shape.toString(layout)));
-            needs_sorting = needs_sorting || shape.z != 0;
+            body_nodes.push_back(std::move(shape.clone()));
+            needs_sorting = needs_sorting || body_nodes.back()->z != 0;
             return *this;
         }
         std::string toString()
@@ -808,13 +954,33 @@ namespace svg
                 << attribute("xmlns", "http://www.w3.org/2000/svg")
                 << attribute("version", svgVersion()) << ">\n";
             if (needs_sorting) {
-                std::stable_sort(body_nodes_str_list.begin(), body_nodes_str_list.end(),
-                          [](const std::pair<int, std::string> &a, const std::pair<int, std::string> &b){
-                    return a.first < b.first; // decending order rgd. z, keep equal z's (especially the default z=0) in the order of insertions
+                std::stable_sort(body_nodes.begin(), body_nodes.end(),
+                          [](const std::unique_ptr<Shape> &a, const std::unique_ptr<Shape> &b){
+                    // Ascending order rgd. z, keep equal z's (especially the default z=0) in the
+                    // order of insertions:
+                    return a->z < b->z;
                 });
             }
-            for (const auto& body_node_str : body_nodes_str_list) {
-                str << body_node_str.second;
+            // Catch all markers and add them here if used:
+            internal::MarkerSet all_used_markers(internal::compareMarker);
+            for (const auto& body_node : body_nodes) {
+                auto m = dynamic_cast<const Markerable*>(body_node.get());
+                if (m) {
+                    auto markers = m->getUsedMarkers();
+                    for (const auto &i: markers) {
+                        all_used_markers.insert(i);
+                    }
+                }
+            }
+            if (!all_used_markers.empty()) {
+                str << elemStart("defs", true);
+                for (const auto &m: all_used_markers) {
+                    str << m->toString(layout);
+                }
+                str << "\t" << elemEnd("defs");
+            }
+            for (const auto& body_node : body_nodes) {
+                str << body_node->toString(layout);
             }
             str << elemEnd("svg");
         }
@@ -823,7 +989,7 @@ namespace svg
         std::string file_name;
         Layout layout;
 
-        std::vector<std::pair<int, std::string>> body_nodes_str_list;
+        std::vector<std::unique_ptr<Shape>> body_nodes;
         bool needs_sorting;
     };
 }
