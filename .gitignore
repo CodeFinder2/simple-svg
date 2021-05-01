@@ -28,3 +28,4 @@ build/
 *.exe
 *.out
 *.app
+*.txt.user
