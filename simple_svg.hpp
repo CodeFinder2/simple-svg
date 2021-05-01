@@ -458,6 +458,10 @@ namespace svg
             edge.x += offset.x;
             edge.y += offset.y;
         }
+        Rectangle centerAt(Point const & pos) const
+        {
+            return Rectangle(Point(pos.x - width / 2.0, pos.y - height / 2.0), width, height, fill, stroke);
+        }
         virtual std::unique_ptr<Shape> clone() const override
         {
             return svg::make_unique<Rectangle>(*this);
