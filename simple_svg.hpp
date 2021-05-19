@@ -82,6 +82,8 @@ namespace svg
 
     inline bool valid_num(double x) { return !std::isinf(x) && !std::isnan(x); }
 
+    inline bool equal(double a, double b, double eps = 1e-10) { return std::fabs(a - b) < eps; }
+
     // Quick optional return type.  This allows functions to return an invalid
     //  value if no good return is possible.  The user checks for validity
     //  before using the returned value.
@@ -512,6 +514,34 @@ namespace svg
         bool valid() const { return !id.empty(); }
         std::unique_ptr<Shape>& operator[](size_t index) { return shapes[index]; }
         size_t size() const { return shapes.size(); }
+        // Checks if \c *this is \a visually not equal to \c that. \c id is \a not considered.
+        // This is used in svg::Document to test for Marker ID collisions.
+        bool operator!=(const Marker &that) const
+        {
+            if (shapes.size() != that.shapes.size() || !equal(marker_width, that.marker_width) ||
+                !equal(ref_x, that.ref_x) || !equal(marker_height, that.marker_height) ||
+                !equal(ref_y, that.ref_y)) {
+                return true;
+            }
+            // Convert all shapes to strings, sort them to make the comparison independent of the
+            // order:
+            const Layout DUMMY;
+            std::vector<std::string> str_shapes[2];
+            str_shapes[0].resize(shapes.size());
+            str_shapes[1].resize(shapes.size());
+            for (size_t i = 0; i < shapes.size(); ++i) {
+                str_shapes[0][i] = shapes[i]->toString(DUMMY);
+                str_shapes[1][i] = that.shapes[i]->toString(DUMMY);
+            }
+            std::sort(str_shapes[0].begin(), str_shapes[0].end());
+            std::sort(str_shapes[1].begin(), str_shapes[1].end());
+            for (size_t i = 0; i < shapes.size(); ++i) {
+                if (str_shapes[0][i] != str_shapes[1][i]) {
+                    return true;
+                }
+            }
+            return false;
+        }
     private:
         std::vector<std::unique_ptr<Shape>> shapes;
         std::string id;
@@ -520,7 +550,6 @@ namespace svg
         double ref_x;
         double ref_y;
     };
-    // TODO: handle id collisions
 
     namespace internal {
         auto compareMarker = [](const Marker *a, const Marker *b) { return a->getId() < b->getId(); };
@@ -1122,6 +1151,14 @@ namespace svg
                 if (m) {
                     auto markers = m->getUsedMarkers();
                     for (const auto &i: markers) {
+                        for (const auto &j: all_used_markers) {
+                            if (i->getId() == j->getId() && *i != *j) {
+                                std::cerr << "Marker collision detected for ID=" << i->getId()
+                                          << " within this element: \n"
+                                          << body_node->toString(layout)
+                                          << "\nExpect markers not to be rendered correctly." << std::endl;
+                            }
+                        }
                         all_used_markers.insert(i);
                     }
                 }
