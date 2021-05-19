@@ -41,6 +41,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ctime>
 #include <memory>
 #include <set>
+#include <cmath>
 
 #include <iostream>
 
@@ -78,6 +79,8 @@ namespace svg
         return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
     }
 
+    inline bool valid_num(double x) { return !std::isinf(x) && !std::isnan(x); }
+
     // Quick optional return type.  This allows functions to return an invalid
     //  value if no good return is possible.  The user checks for validity
     //  before using the returned value.
@@ -114,8 +117,18 @@ namespace svg
 
     struct Dimensions
     {
-        Dimensions(double width, double height) : width(width), height(height) { }
-        Dimensions(double combined = 0) : width(combined), height(combined) { }
+        Dimensions(double width, double height) : width(width), height(height)
+        {
+            if (!valid_num(width) || !valid_num(height)) {
+                std::cerr << "Infs or NaNs provided to svg::Dimensions()." << std::endl;
+            }
+        }
+        Dimensions(double combined = 0) : width(combined), height(combined)
+        {
+          if (!valid_num(combined)) {
+              std::cerr << "Infs or NaNs provided to svg::Dimensions()." << std::endl;
+          }
+        }
         double width;
         double height;
     };
@@ -162,7 +175,12 @@ namespace svg
 
         Layout(Dimensions const & dimensions = Dimensions(400, 300), Origin origin = BottomLeft,
             double scale = 1, Point const & origin_offset = Point(0, 0))
-            : dimensions(dimensions), scale(scale), origin(origin), origin_offset(origin_offset) { }
+            : dimensions(dimensions), scale(scale), origin(origin), origin_offset(origin_offset)
+        {
+          if (!valid_num(scale) || !valid_num(origin_offset.x) || !valid_num(origin_offset.y)) {
+              std::cerr << "Infs or NaNs provided to svg::Layout()." << std::endl;
+          }
+        }
         Dimensions dimensions;
         double scale;
         Origin origin;
@@ -204,7 +222,7 @@ namespace svg
         enum Defaults { Transparent = -1, Aqua, Black, Gray, Blue, Brown, Cyan, Fuchsia,
             Green, Lime, Magenta, Orange, Purple, Red, Silver, White, Yellow, Random };
 
-        Color(int r, int g, int b) : transparent(false), red(r), green(g), blue(b) { }
+        Color(unsigned char r, unsigned char g, unsigned char b) : transparent(false), red(r), green(g), blue(b) { }
         Color(Defaults color)
             : transparent(false), red(0), green(0), blue(0)
         {
@@ -265,7 +283,12 @@ namespace svg
     {
     public:
         Fill(Color::Defaults color, double opacity_level = 1.0)
-          : color(color), opacity(opacity_level) { }
+            : color(color), opacity(opacity_level)
+        {
+            if (opacity_level < 0 || opacity_level > 1) {
+                std::cerr << "Fill::Fill(): opacity_level=" << opacity_level << " is out of range [0,1]." << std::endl;
+            }
+        }
         Fill(Color color = Color::Transparent)
             : color(color), opacity(1.0) { }
         std::string toString(Layout const & layout) const
@@ -290,7 +313,16 @@ namespace svg
                unsigned int stroke_dashoffset = 0, double stroke_opacity = 1.0)
             : width(width), color(color), nonScaling(nonScalingStroke),
             miterlimit(stroke_miterlimit), dasharray(stroke_dasharray),
-            dashoffset(stroke_dashoffset), opacity(stroke_opacity) { }
+            dashoffset(stroke_dashoffset), opacity(stroke_opacity)
+        {
+            if (!valid_num(width) || !valid_num(stroke_miterlimit) ||
+                !valid_num(stroke_opacity)) {
+                std::cerr << "Infs or NaNs provided to svg::Stroke()." << std::endl;
+            }
+            if (stroke_opacity < 0 || stroke_opacity > 1) {
+                std::cerr << "Stroke::Stroke(): stroke_opacity=" << stroke_opacity << " is out of range [0,1]." << std::endl;
+            }
+        }
         std::string toString(Layout const & layout) const
         {
             // If stroke width is invalid.
@@ -531,7 +563,12 @@ namespace svg
     public:
         Circle(Point const & center, double diameter, Fill const & fill,
             Stroke const & stroke = Stroke())
-            : Shape(fill, stroke), center(center), radius(diameter / 2) { }
+            : Shape(fill, stroke), center(center), radius(diameter / 2)
+        {
+            if (!valid_num(center.x) || !valid_num(center.y) || !valid_num(diameter)) {
+                std::cerr << "Infs or NaNs provided to svg::Circle()." << std::endl;
+            }
+        }
         std::string toString(Layout const & layout) const
         {
             std::stringstream ss;
@@ -543,6 +580,9 @@ namespace svg
         }
         void offset(Point const & offset)
         {
+            if (!valid_num(offset.x) || !valid_num(offset.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Circle::offset()." << std::endl;
+            }
             center.x += offset.x;
             center.y += offset.y;
         }
@@ -560,8 +600,13 @@ namespace svg
     public:
         Elipse(Point const & center, double width, double height,
             Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : Shape(fill, stroke), center(center), radius_width(width / 2),
-            radius_height(height / 2) { }
+            : Shape(fill, stroke), center(center), radius_width(width / 2.0),
+              radius_height(height / 2.0)
+        {
+            if (!valid_num(center.x) || !valid_num(center.y) || !valid_num(width) || !valid_num(height)) {
+                std::cerr << "Infs or NaNs provided to svg::Elipse()." << std::endl;
+            }
+        }
         std::string toString(Layout const & layout) const
         {
             std::stringstream ss;
@@ -574,6 +619,9 @@ namespace svg
         }
         void offset(Point const & offset)
         {
+            if (!valid_num(offset.x) || !valid_num(offset.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Elipse::offset()." << std::endl;
+            }
             center.x += offset.x;
             center.y += offset.y;
         }
@@ -601,7 +649,12 @@ namespace svg
         Rectangle(Point const & edge, double width, double height,
             Fill const & fill = Fill(), Stroke const & stroke = Stroke())
             : Shape(fill, stroke), edge(edge), width(width),
-            height(height) { }
+            height(height)
+        {
+            if (!valid_num(edge.x) || !valid_num(edge.y) || !valid_num(width) || !valid_num(height)) {
+                std::cerr << "Infs or NaNs provided to svg::Rectangle()." << std::endl;
+            }
+        }
         std::string toString(Layout const & layout) const
         {
             std::stringstream ss;
@@ -614,6 +667,9 @@ namespace svg
         }
         void offset(Point const & offset)
         {
+            if (!valid_num(offset.x) || !valid_num(offset.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Rectangle::offset()." << std::endl;
+            }
             edge.x += offset.x;
             edge.y += offset.y;
         }
@@ -636,7 +692,13 @@ namespace svg
     public:
         Line(Point const & start_point, Point const & end_point, Stroke const & stroke = Stroke())
             : Shape(Fill(), stroke), start_point(start_point),
-              end_point(end_point) { }
+              end_point(end_point)
+        {
+            if (!valid_num(start_point.x) || !valid_num(start_point.y) ||
+                !valid_num(end_point.x) || !valid_num(end_point.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Line()." << std::endl;
+            }
+        }
         std::string toString(Layout const & layout) const
         {
             std::stringstream ss;
@@ -649,6 +711,9 @@ namespace svg
         }
         void offset(Point const & offset)
         {
+            if (!valid_num(offset.x) || !valid_num(offset.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Line::offset()." << std::endl;
+            }
             start_point.x += offset.x;
             start_point.y += offset.y;
 
@@ -670,10 +735,21 @@ namespace svg
         Polygon(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
             : Shape(fill, stroke) { }
         Polygon(const std::vector<Point> &pts, Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : points(pts), Shape(fill, stroke) { }
+            : points(pts), Shape(fill, stroke)
+        {
+            for (size_t i = 0; i < pts.size(); ++i) {
+                if (!valid_num(pts[i].x) || !valid_num(pts[i].y)) {
+                    std::cerr << "Infs or NaNs provided to svg::Polygon()." << std::endl;
+                    break;
+                }
+            }
+        }
         Polygon(Stroke const & stroke = Stroke()) : Shape(Color::Transparent, stroke) { }
         Polygon & operator<<(Point const & point)
         {
+            if (!valid_num(point.x) || !valid_num(point.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Polygon::operator<<()." << std::endl;
+            }
             points.push_back(point);
             return *this;
         }
@@ -692,6 +768,9 @@ namespace svg
         }
         void offset(Point const & offset)
         {
+            if (!valid_num(offset.x) || !valid_num(offset.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Polygon::offset()." << std::endl;
+            }
             for (unsigned i = 0; i < points.size(); ++i) {
                 points[i].x += offset.x;
                 points[i].y += offset.y;
@@ -708,62 +787,68 @@ namespace svg
     class Path : public Shape
     {
     public:
-       Path(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-          : Shape(fill, stroke)
-       {  startNewSubPath(); }
-       Path(Stroke const & stroke = Stroke()) : Shape(Color::Transparent, stroke)
-       {  startNewSubPath(); }
-       Path & operator<<(Point const & point)
-       {
-          paths.back().push_back(point);
-          return *this;
-       }
+        Path(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
+            : Shape(fill, stroke)
+        { startNewSubPath(); }
+        Path(Stroke const & stroke = Stroke()) : Shape(Color::Transparent, stroke)
+        {  startNewSubPath(); }
+        Path & operator<<(Point const & point)
+        {
+            if (!valid_num(point.x) || !valid_num(point.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Path::operator<<()." << std::endl;
+            }
+            paths.back().push_back(point);
+            return *this;
+        }
 
-       void startNewSubPath()
-       {
-          if (paths.empty() || 0 < paths.back().size())
-            paths.emplace_back();
-       }
+        void startNewSubPath()
+        {
+            if (paths.empty() || 0 < paths.back().size())
+                paths.emplace_back();
+        }
 
-       std::string toString(Layout const & layout) const
-       {
-          std::stringstream ss;
-          ss << elemStart("path");
+        std::string toString(Layout const & layout) const
+        {
+            std::stringstream ss;
+            ss << elemStart("path");
 
-          ss << "d=\"";
-          for (auto const& subpath: paths)
-          {
-             if (subpath.empty())
-                continue;
+            ss << "d=\"";
+            for (auto const& subpath: paths)
+            {
+                if (subpath.empty())
+                    continue;
 
-             ss << "M";
-             for (auto const& point: subpath)
-                ss << translateX(point.x, layout) << "," << translateY(point.y, layout) << " ";
-             ss << "z ";
+                ss << "M";
+                for (auto const& point: subpath)
+                    ss << translateX(point.x, layout) << "," << translateY(point.y, layout) << " ";
+                ss << "z ";
           }
           ss << "\" ";
           ss << "fill-rule=\"evenodd\" ";
 
           ss << fill.toString(layout) << stroke.toString(layout) << emptyElemEnd();
           return ss.str();
-       }
+        }
 
-       void offset(Point const & offset)
-       {
-          for (auto& subpath : paths)
-             for (auto& point : subpath)
-             {
-                point.x += offset.x;
-                point.y += offset.y;
-             }
-       }
+        void offset(Point const & offset)
+        {
+            if (!valid_num(offset.x) || !valid_num(offset.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Path::offset()." << std::endl;
+            }
+            for (auto& subpath : paths) {
+               for (auto& point : subpath) {
+                    point.x += offset.x;
+                    point.y += offset.y;
+                }
+            }
+        }
 
-       virtual std::unique_ptr<Shape> clone() const override
-       {
-           return svg::make_unique<Path>(*this);
-       }
+        virtual std::unique_ptr<Shape> clone() const override
+        {
+            return svg::make_unique<Path>(*this);
+        }
     private:
-       std::vector<std::vector<Point>> paths;
+        std::vector<std::vector<Point>> paths;
     };
 
     class Polyline : public Shape, public Markerable
@@ -772,11 +857,22 @@ namespace svg
         Polyline(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
             : Shape(fill, stroke) { }
         Polyline(Stroke const & stroke = Stroke()) : Shape(Color::Transparent, stroke) { }
-        Polyline(std::vector<Point> const & points,
+        Polyline(std::vector<Point> const & pts,
             Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : Shape(fill, stroke), points(points) { }
+            : Shape(fill, stroke), points(pts)
+        {
+            for (size_t i = 0; i < pts.size(); ++i) {
+                if (!valid_num(pts[i].x) || !valid_num(pts[i].y)) {
+                    std::cerr << "Infs or NaNs provided to svg::Polyline()." << std::endl;
+                    break;
+                }
+            }
+        }
         Polyline & operator<<(Point const & point)
         {
+            if (!valid_num(point.x) || !valid_num(point.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Polyline::operator<<()." << std::endl;
+            }
             points.push_back(point);
             return *this;
         }
@@ -796,6 +892,9 @@ namespace svg
         }
         void offset(Point const & offset)
         {
+            if (!valid_num(offset.x) || !valid_num(offset.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Polyline::offset()." << std::endl;
+            }
             for (unsigned i = 0; i < points.size(); ++i) {
                 points[i].x += offset.x;
                 points[i].y += offset.y;
@@ -813,7 +912,15 @@ namespace svg
     public:
         Text(Point const & origin, std::string const & content, Fill const & fill = Fill(),
              Font const & font = Font(), Stroke const & stroke = Stroke())
-            : Shape(fill, stroke), origin(origin), content(content), font(font) { }
+            : Shape(fill, stroke), origin(origin), content(content), font(font)
+        {
+            if (!valid_num(origin.x) || !valid_num(origin.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Text()." << std::endl;
+            }
+            if (content.empty()) {
+                std::cerr << "Empty string provided to svg::Text()." << std::endl;
+            }
+        }
         std::string toString(Layout const & layout) const
         {
             std::stringstream ss;
@@ -825,6 +932,9 @@ namespace svg
         }
         void offset(Point const & offset)
         {
+            if (!valid_num(offset.x) || !valid_num(offset.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Text::offset()." << std::endl;
+            }
             origin.x += offset.x;
             origin.y += offset.y;
         }
@@ -845,7 +955,7 @@ namespace svg
     {
     public:
         LineChart(Dimensions margin = Dimensions(),
-                  Stroke const & axis_stroke = Stroke(.5, Color::Purple))
+                  Stroke const & axis_stroke = Stroke(0.5, Color::Purple))
             : axis_stroke(axis_stroke), margin(margin) { }
         LineChart & operator<<(Polyline const & polyline)
         {
@@ -868,6 +978,9 @@ namespace svg
         }
         void offset(Point const & offset)
         {
+            if (!valid_num(offset.x) || !valid_num(offset.y)) {
+                std::cerr << "Infs or NaNs provided to svg::LineChart::offset()." << std::endl;
+            }
             for (unsigned i = 0; i < polylines.size(); ++i)
                 polylines[i].offset(offset);
         }
@@ -1002,7 +1115,6 @@ namespace svg
             str << elemEnd("svg");
         }
 
-    private:
         std::string file_name;
         Layout layout;
 
