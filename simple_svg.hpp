@@ -264,17 +264,22 @@ namespace svg
     class Fill : public Serializeable
     {
     public:
-        Fill(Color::Defaults color) : color(color) { }
+        Fill(Color::Defaults color, double opacity_level = 1.0)
+          : color(color), opacity(opacity_level) { }
         Fill(Color color = Color::Transparent)
-            : color(color) { }
+            : color(color), opacity(1.0) { }
         std::string toString(Layout const & layout) const
         {
             std::stringstream ss;
             ss << attribute("fill", color.toString(layout));
+            if (opacity < 1.0) {
+                ss << attribute("fill-opacity", opacity);
+            }
             return ss.str();
         }
     private:
         Color color;
+        double opacity; // in [0, 1], 1 = fully visible, 0 = fully transparent
     };
 
     class Stroke : public Serializeable
