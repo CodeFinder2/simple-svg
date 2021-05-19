@@ -388,6 +388,10 @@ namespace svg
         virtual std::string toString(Layout const & layout) const = 0;
         virtual void offset(Point const & offset) = 0;
         virtual std::unique_ptr<Shape> clone() const = 0;
+        Fill getFill() const { return fill; }
+        Stroke getStroke() const { return stroke; }
+        void setFill(Fill f) { fill = f; }
+        void setStroke(Stroke s) { stroke = s; }
         /**
          * z order of SVG elements in the document. Default is zero which equals the order of insertion, that is,
          * an element A that is inserted after an element B overlays it because A is drawn after (and possibly over) B.
