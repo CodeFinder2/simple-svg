@@ -505,14 +505,14 @@ namespace svg
         typedef std::set<const Marker*, decltype(compareMarker)> MarkerSet;
     }
 
-    class Markerable
+    class Markerable : public Serializeable
     {
     public:
         Markerable() : marker_start(nullptr), marker_mid(nullptr), marker_end(nullptr) { }
         void setStartMarker(const Marker *m) { marker_start = m; }
         void setMidMarker(const Marker *m) { marker_mid = m; }
         void setEndMarker(const Marker *m) { marker_end = m; }
-        std::string toString(Layout const & layout) const
+        std::string toString(Layout const &) const override
         {
             std::stringstream ss;
             if (marker_start && marker_start->valid()) {
