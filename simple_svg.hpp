@@ -508,7 +508,10 @@ namespace svg
             return ss.str();
         }
         std::string getId() const { return id; }
+        void setId(const std::string new_id) { id = new_id; }
         bool valid() const { return !id.empty(); }
+        std::unique_ptr<Shape>& operator[](size_t index) { return shapes[index]; }
+        size_t size() const { return shapes.size(); }
     private:
         std::vector<std::unique_ptr<Shape>> shapes;
         std::string id;
