@@ -42,6 +42,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <memory>
 #include <set>
 #include <cmath>
+#include <stdexcept>
 
 #include <iostream>
 
