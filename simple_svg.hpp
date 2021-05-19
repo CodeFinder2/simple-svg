@@ -590,6 +590,14 @@ namespace svg
     class Rectangle : public Shape
     {
     public:
+        /**
+         * Creates a rectangle (shape).
+         * \param [in] edge Upper left corner of the rectangle
+         * \param [in] width Width of the rectangle
+         * \param [in] height Height of the rectangle
+         * \param [in] fill Fill style used to fill the rectangular area
+         * \param [in] stroke Stroke used to create the boundary contour
+         */
         Rectangle(Point const & edge, double width, double height,
             Fill const & fill = Fill(), Stroke const & stroke = Stroke())
             : Shape(fill, stroke), edge(edge), width(width),
