@@ -248,7 +248,7 @@ namespace svg
                 case Random:
                   static bool srand_init = false;
                   if (!srand_init) {
-                      srand(time(nullptr));
+                      srand(static_cast<unsigned int>(time(nullptr)));
                       srand_init = true;
                   }
                   assign(rand() % 256, rand() % 256, rand() % 256);
@@ -336,9 +336,7 @@ namespace svg
             if (miterlimit >= 0) {
                 ss << attribute("stroke-miterlimit", translateScale(miterlimit, layout));
             }
-            if (dashoffset >= 0) {
-                ss << attribute("stroke-dashoffset", translateScale(dashoffset, layout));
-            }
+            ss << attribute("stroke-dashoffset", translateScale(dashoffset, layout));
             std::stringstream tmp;
             for (size_t i = 0; i < dasharray.size(); ++i) {
                 tmp << dasharray[i];
@@ -385,7 +383,7 @@ namespace svg
     {
     public:
         Shape(Fill const & fill = Fill(), Stroke const & stroke = Stroke(), int z_order = 0)
-            : fill(fill), stroke(stroke), z(z_order) { }
+            : z(z_order), fill(fill), stroke(stroke) { }
         virtual ~Shape() { }
         virtual std::string toString(Layout const & layout) const = 0;
         virtual void offset(Point const & offset) = 0;
@@ -463,10 +461,10 @@ namespace svg
         }
         Marker& operator<<(const Shape &shape)
         {
-            shapes.push_back(std::move(shape.clone()));
+            shapes.push_back(shape.clone());
             return *this;
         }
-        std::string toString(Layout const & layout) const
+        std::string toString(Layout const &) const override
         {
             // Don't add any translation:
             const Layout UNCHANGED(Dimensions(), Layout::TopLeft);
@@ -570,7 +568,7 @@ namespace svg
                 std::cerr << "Infs or NaNs provided to svg::Circle()." << std::endl;
             }
         }
-        std::string toString(Layout const & layout) const
+        std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
             ss << elemStart("circle") << attribute("cx", translateX(center.x, layout))
@@ -579,7 +577,7 @@ namespace svg
                << stroke.toString(layout) << emptyElemEnd();
             return ss.str();
         }
-        void offset(Point const & offset)
+        void offset(Point const & offset) override
         {
             if (!valid_num(offset.x) || !valid_num(offset.y)) {
                 std::cerr << "Infs or NaNs provided to svg::Circle::offset()." << std::endl;
@@ -608,7 +606,7 @@ namespace svg
                 std::cerr << "Infs or NaNs provided to svg::Elipse()." << std::endl;
             }
         }
-        std::string toString(Layout const & layout) const
+        std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
             ss << elemStart("ellipse") << attribute("cx", translateX(center.x, layout))
@@ -618,7 +616,7 @@ namespace svg
                << fill.toString(layout) << stroke.toString(layout) << emptyElemEnd();
             return ss.str();
         }
-        void offset(Point const & offset)
+        void offset(Point const & offset) override
         {
             if (!valid_num(offset.x) || !valid_num(offset.y)) {
                 std::cerr << "Infs or NaNs provided to svg::Elipse::offset()." << std::endl;
@@ -656,7 +654,7 @@ namespace svg
                 std::cerr << "Infs or NaNs provided to svg::Rectangle()." << std::endl;
             }
         }
-        std::string toString(Layout const & layout) const
+        std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
             ss << elemStart("rect") << attribute("x", translateX(edge.x, layout))
@@ -666,7 +664,7 @@ namespace svg
                << fill.toString(layout) << stroke.toString(layout) << emptyElemEnd();
             return ss.str();
         }
-        void offset(Point const & offset)
+        void offset(Point const & offset) override
         {
             if (!valid_num(offset.x) || !valid_num(offset.y)) {
                 std::cerr << "Infs or NaNs provided to svg::Rectangle::offset()." << std::endl;
@@ -700,7 +698,7 @@ namespace svg
                 std::cerr << "Infs or NaNs provided to svg::Line()." << std::endl;
             }
         }
-        std::string toString(Layout const & layout) const
+        std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
             ss << elemStart("line") << attribute("x1", translateX(start_point.x, layout))
@@ -710,7 +708,7 @@ namespace svg
                << stroke.toString(layout) << Markerable::toString(layout) << emptyElemEnd();
             return ss.str();
         }
-        void offset(Point const & offset)
+        void offset(Point const & offset) override
         {
             if (!valid_num(offset.x) || !valid_num(offset.y)) {
                 std::cerr << "Infs or NaNs provided to svg::Line::offset()." << std::endl;
@@ -736,7 +734,7 @@ namespace svg
         Polygon(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
             : Shape(fill, stroke) { }
         Polygon(const std::vector<Point> &pts, Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : points(pts), Shape(fill, stroke)
+            : Shape(fill, stroke), points(pts)
         {
             for (size_t i = 0; i < pts.size(); ++i) {
                 if (!valid_num(pts[i].x) || !valid_num(pts[i].y)) {
@@ -754,7 +752,7 @@ namespace svg
             points.push_back(point);
             return *this;
         }
-        std::string toString(Layout const & layout) const
+        std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
             ss << elemStart("polygon");
@@ -767,7 +765,7 @@ namespace svg
             ss << fill.toString(layout) << stroke.toString(layout) << emptyElemEnd();
             return ss.str();
         }
-        void offset(Point const & offset)
+        void offset(Point const & offset) override
         {
             if (!valid_num(offset.x) || !valid_num(offset.y)) {
                 std::cerr << "Infs or NaNs provided to svg::Polygon::offset()." << std::endl;
@@ -808,7 +806,7 @@ namespace svg
                 paths.emplace_back();
         }
 
-        std::string toString(Layout const & layout) const
+        std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
             ss << elemStart("path");
@@ -831,7 +829,7 @@ namespace svg
           return ss.str();
         }
 
-        void offset(Point const & offset)
+        void offset(Point const & offset) override
         {
             if (!valid_num(offset.x) || !valid_num(offset.y)) {
                 std::cerr << "Infs or NaNs provided to svg::Path::offset()." << std::endl;
@@ -877,7 +875,7 @@ namespace svg
             points.push_back(point);
             return *this;
         }
-        std::string toString(Layout const & layout) const
+        std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
             ss << elemStart("polyline");
@@ -891,7 +889,7 @@ namespace svg
                << Markerable::toString(layout) << emptyElemEnd();
             return ss.str();
         }
-        void offset(Point const & offset)
+        void offset(Point const & offset) override
         {
             if (!valid_num(offset.x) || !valid_num(offset.y)) {
                 std::cerr << "Infs or NaNs provided to svg::Polyline::offset()." << std::endl;
@@ -922,7 +920,7 @@ namespace svg
                 std::cerr << "Empty string provided to svg::Text()." << std::endl;
             }
         }
-        std::string toString(Layout const & layout) const
+        std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
             ss << elemStart("text") << attribute("x", translateX(origin.x, layout))
@@ -931,7 +929,7 @@ namespace svg
                << ">" << content << elemEnd("text");
             return ss.str();
         }
-        void offset(Point const & offset)
+        void offset(Point const & offset) override
         {
             if (!valid_num(offset.x) || !valid_num(offset.y)) {
                 std::cerr << "Infs or NaNs provided to svg::Text::offset()." << std::endl;
@@ -966,7 +964,7 @@ namespace svg
             polylines.push_back(polyline);
             return *this;
         }
-        std::string toString(Layout const & layout) const
+        std::string toString(Layout const & layout) const override
         {
             if (polylines.empty())
                 return "";
@@ -977,7 +975,7 @@ namespace svg
 
             return ret + axisString(layout);
         }
-        void offset(Point const & offset)
+        void offset(Point const & offset) override
         {
             if (!valid_num(offset.x) || !valid_num(offset.y)) {
                 std::cerr << "Infs or NaNs provided to svg::LineChart::offset()." << std::endl;
@@ -1053,7 +1051,7 @@ namespace svg
 
         Document & operator<<(Shape const & shape)
         {
-            body_nodes.push_back(std::move(shape.clone()));
+            body_nodes.push_back(shape.clone());
             needs_sorting = needs_sorting || body_nodes.back()->z != 0;
             return *this;
         }
