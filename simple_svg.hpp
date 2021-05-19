@@ -958,6 +958,7 @@ namespace svg
             writeToStream(ofs);
             return ofs.good();
         }
+        Layout getLayout() const { return layout; }
     private:
         void writeToStream(std::ostream& str)
         {
