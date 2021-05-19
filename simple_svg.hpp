@@ -435,6 +435,9 @@ namespace svg
         }
         std::string toString(Layout const & layout) const
         {
+            // Don't add any translation:
+            const Layout UNCHANGED(Dimensions(), Layout::TopLeft);
+
             std::stringstream ss;
             if (valid()) { // only if not empty / defined
                 ss << "\t" << elemStart("marker")
@@ -445,7 +448,7 @@ namespace svg
                    << attribute("refY", ref_y)
                    << attribute("orient", "auto") << ">\n";
                 for (size_t i = 0; i < shapes.size(); ++i) {
-                    ss << "\t\t" << shapes[i]->toString(layout);
+                    ss << "\t\t" << shapes[i]->toString(UNCHANGED);
                     if (i + 1 < shapes.size()) {
                         ss << "\n";
                     }
