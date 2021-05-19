@@ -445,6 +445,21 @@ namespace svg
             ref_x = that.ref_x;
             ref_y = that.ref_y;
         }
+        Marker& operator= (Marker &that)
+        {
+            if (this != &that) {
+                shapes.reserve(that.shapes.size());
+                for (size_t i = 0; i < that.shapes.size(); ++i) {
+                    shapes.push_back(that.shapes[i]->clone());
+                }
+                id = that.id;
+                marker_width = that.marker_width;
+                marker_height = that.marker_height;
+                ref_x = that.ref_x;
+                ref_y = that.ref_y;
+            }
+            return *this;
+        }
         Marker& operator= (Marker &&that)
         {
             if (this != &that) {
