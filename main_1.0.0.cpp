@@ -76,5 +76,5 @@ int main()
 
     doc << Rectangle(Point(70, 55), 20, 15, Color::Yellow);
 
-    doc.save();
+    return !doc.save();
 }
