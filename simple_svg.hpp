@@ -696,6 +696,9 @@ namespace svg
         }
         Rectangle centerAt(Point const & pos) const
         {
+            if (!valid_num(pos.x) || !valid_num(pos.y)) {
+                std::cerr << "Infs or NaNs provided to svg::Rectangle::centerAt()." << std::endl;
+            }
             return Rectangle(Point(pos.x - width / 2.0, pos.y - height / 2.0), width, height, fill, stroke);
         }
         virtual std::unique_ptr<Shape> clone() const override
