@@ -413,10 +413,11 @@ namespace svg
     {
     public:
         // Creates an empty marker (no visual effect).
-        Marker() { }
+        Marker() : orient("auto") { }
         Marker(const std::string &markerId, double markerWidth, double markerHeight, double refX, double refY,
-               const Shape &shape)
-            : id(markerId), marker_width(markerWidth), marker_height(markerHeight), ref_x(refX), ref_y(refY)
+               const Shape &shape, const std::string &orientation = "auto")
+            : id(markerId), marker_width(markerWidth), marker_height(markerHeight), ref_x(refX),
+              ref_y(refY), orient(orientation)
         {
             *this << shape;
         }
@@ -498,7 +499,7 @@ namespace svg
                    << attribute("markerHeight", marker_height)
                    << attribute("refX", ref_x)
                    << attribute("refY", ref_y)
-                   << attribute("orient", "auto") << ">\n";
+                   << attribute("orient", orient) << ">\n";
                 for (size_t i = 0; i < shapes.size(); ++i) {
                     ss << "\t\t" << shapes[i]->toString(UNCHANGED);
                     if (i + 1 < shapes.size()) {
@@ -542,6 +543,14 @@ namespace svg
             }
             return false;
         }
+        void setOrientation(const std::string orientation = "auto")
+        {
+            if (orientation != "auto" && orientation != "auto-start-reverse") {
+                throw std::invalid_argument("Marker::setOrientation() only accepts the strings \"auto\" or \"auto-start-reverse\".");
+            }
+            orient = orientation;
+        }
+        void setOrientation(double angle) { orient = std::to_string(angle); }
     private:
         std::vector<std::unique_ptr<Shape>> shapes;
         std::string id;
@@ -549,6 +558,7 @@ namespace svg
         double marker_height;
         double ref_x;
         double ref_y;
+        std::string orient;
     };
 
     namespace internal {
