@@ -432,6 +432,7 @@ namespace svg
             marker_height = that.marker_height;
             ref_x = that.ref_x;
             ref_y = that.ref_y;
+            orient = that.orient;
         }
         Marker(Marker &&that)
         {
@@ -447,6 +448,7 @@ namespace svg
             marker_height = that.marker_height;
             ref_x = that.ref_x;
             ref_y = that.ref_y;
+            orient = that.orient;
         }
         Marker& operator= (Marker &that)
         {
@@ -460,6 +462,7 @@ namespace svg
                 marker_height = that.marker_height;
                 ref_x = that.ref_x;
                 ref_y = that.ref_y;
+                orient = that.orient;
             }
             return *this;
         }
@@ -478,6 +481,7 @@ namespace svg
                 marker_height = that.marker_height;
                 ref_x = that.ref_x;
                 ref_y = that.ref_y;
+                orient = that.orient;
             }
             return *this;
         }
