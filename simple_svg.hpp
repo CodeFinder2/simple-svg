@@ -219,6 +219,36 @@ namespace svg
         virtual std::string toString(Layout const & layout) const = 0;
     };
 
+    class Identifiable
+    {
+    public:
+      Identifiable(const std::string &id = {}) {}
+      const std::string& getId() const { return id; }
+      void setId(const std::string &new_id = {}) { id = new_id; }
+      std::string randomId(size_t len)
+      {
+          std::string tmp_s;
+          static const char alphanum[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+          std::srand(unsigned(time(nullptr)));
+          tmp_s.reserve(len);
+          for (size_t i = 0; i < len; ++i) {
+              tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
+          }
+          return tmp_s;
+      }
+    protected:
+      std::string id;
+      std::string serializeId() const
+      {
+        if (id.empty()) {
+          return {};
+        } else {
+          return attribute("id", id);
+        }
+      }
+    };
+
     class Color : public Serializeable
     {
     public:
@@ -381,11 +411,11 @@ namespace svg
         std::string family;
     };
 
-    class Shape : public Serializeable
+    class Shape : public Serializeable, public Identifiable
     {
     public:
-        Shape(Fill const & fill = Fill(), Stroke const & stroke = Stroke(), int z_order = 0)
-            : z(z_order), fill(fill), stroke(stroke) { }
+        Shape(Fill const & fill = Fill(), Stroke const & stroke = Stroke(), int z_order = 0, const std::string& shape_id = {})
+            : z(z_order), fill(fill), stroke(stroke), Identifiable(shape_id) { }
         virtual ~Shape() { }
         virtual std::string toString(Layout const & layout) const = 0;
         virtual void offset(Point const & offset) = 0;
@@ -409,14 +439,14 @@ namespace svg
         Stroke stroke;
     };
 
-    class Marker : public Serializeable
+    class Marker : public Serializeable, public Identifiable
     {
     public:
         // Creates an empty marker (no visual effect).
         Marker() : orient("auto") { }
         Marker(const std::string &markerId, double markerWidth, double markerHeight, double refX, double refY,
                const Shape &shape, const std::string &orientation = "auto")
-            : id(markerId), marker_width(markerWidth), marker_height(markerHeight), ref_x(refX),
+            : Identifiable(markerId), marker_width(markerWidth), marker_height(markerHeight), ref_x(refX),
               ref_y(refY), orient(orientation)
         {
             *this << shape;
@@ -450,7 +480,7 @@ namespace svg
             ref_y = that.ref_y;
             orient = that.orient;
         }
-        Marker& operator= (Marker &that)
+        Marker& operator=(Marker &that)
         {
             if (this != &that) {
                 shapes.reserve(that.shapes.size());
@@ -466,7 +496,7 @@ namespace svg
             }
             return *this;
         }
-        Marker& operator= (Marker &&that)
+        Marker& operator=(Marker &&that)
         {
             if (this != &that) {
                 shapes.reserve(that.shapes.size());
@@ -492,13 +522,17 @@ namespace svg
         }
         std::string toString(Layout const &) const override
         {
+            if (id.empty()) {
+                throw std::invalid_argument("svg::Marker::toString() requires a non-empty ID to refer to that marker.");
+            }
+
             // Don't add any translation:
             const Layout UNCHANGED(Dimensions(), Layout::TopLeft);
 
             std::stringstream ss;
             if (valid()) { // only if not empty / defined
                 ss << "\t" << elemStart("marker")
-                   << attribute("id", id)
+                   << serializeId()
                    << attribute("markerWidth", marker_width)
                    << attribute("markerHeight", marker_height)
                    << attribute("refX", ref_x)
@@ -514,8 +548,6 @@ namespace svg
             }
             return ss.str();
         }
-        std::string getId() const { return id; }
-        void setId(const std::string new_id) { id = new_id; }
         bool valid() const { return !id.empty(); }
         std::unique_ptr<Shape>& operator[](size_t index) { return shapes[index]; }
         size_t size() const { return shapes.size(); }
@@ -557,7 +589,6 @@ namespace svg
         void setOrientation(double angle) { orient = std::to_string(angle); }
     private:
         std::vector<std::unique_ptr<Shape>> shapes;
-        std::string id;
         double marker_width;
         double marker_height;
         double ref_x;
@@ -636,7 +667,8 @@ namespace svg
         std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
-            ss << elemStart("circle") << attribute("cx", translateX(center.x, layout))
+            ss << elemStart("circle") << serializeId()
+               << attribute("cx", translateX(center.x, layout))
                << attribute("cy", translateY(center.y, layout))
                << attribute("r", translateScale(radius, layout)) << fill.toString(layout)
                << stroke.toString(layout) << emptyElemEnd();
@@ -674,7 +706,8 @@ namespace svg
         std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
-            ss << elemStart("ellipse") << attribute("cx", translateX(center.x, layout))
+            ss << elemStart("ellipse")<< serializeId()
+               << attribute("cx", translateX(center.x, layout))
                << attribute("cy", translateY(center.y, layout))
                << attribute("rx", translateScale(radius_width, layout))
                << attribute("ry", translateScale(radius_height, layout))
@@ -722,7 +755,8 @@ namespace svg
         std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
-            ss << elemStart("rect") << attribute("x", translateX(edge.x, layout))
+            ss << elemStart("rect") << serializeId()
+               << attribute("x", translateX(edge.x, layout))
                << attribute("y", translateY(edge.y, layout))
                << attribute("width", translateScale(width, layout))
                << attribute("height", translateScale(height, layout))
@@ -769,7 +803,8 @@ namespace svg
         std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
-            ss << elemStart("line") << attribute("x1", translateX(start_point.x, layout))
+            ss << elemStart("line") << serializeId()
+               << attribute("x1", translateX(start_point.x, layout))
                << attribute("y1", translateY(start_point.y, layout))
                << attribute("x2", translateX(end_point.x, layout))
                << attribute("y2", translateY(end_point.y, layout))
@@ -823,7 +858,7 @@ namespace svg
         std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
-            ss << elemStart("polygon");
+            ss << elemStart("polygon") << serializeId();
 
             ss << "points=\"";
             for (unsigned i = 0; i < points.size(); ++i)
@@ -877,7 +912,7 @@ namespace svg
         std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
-            ss << elemStart("path");
+            ss << elemStart("path") << serializeId();
 
             ss << "d=\"";
             for (auto const& subpath: paths)
@@ -946,7 +981,7 @@ namespace svg
         std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
-            ss << elemStart("polyline");
+            ss << elemStart("polyline") << serializeId();
 
             ss << "points=\"";
             for (unsigned i = 0; i < points.size(); ++i)
@@ -991,7 +1026,8 @@ namespace svg
         std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
-            ss << elemStart("text") << attribute("x", translateX(origin.x, layout))
+            ss << elemStart("text") << serializeId()
+               << attribute("x", translateX(origin.x, layout))
                << attribute("y", translateY(origin.y, layout))
                << fill.toString(layout) << stroke.toString(layout) << font.toString(layout)
                << ">" << content << elemEnd("text");
