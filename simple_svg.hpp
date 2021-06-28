@@ -1009,11 +1009,15 @@ namespace svg
         std::vector<Point> points;
     };
 
+    // None will not create any extra SVG/XML and equals "Start" (the default).
+    enum class TextAnchor { Start, Middle, End, None };
+
     class Text : public Shape
     {
     public:
         Text(Point const & origin, std::string const & content, Fill const & fill = Fill(),
-             Font const & font = Font(), Stroke const & stroke = Stroke())
+             Font const & font = Font(), Stroke const & stroke = Stroke(),
+             TextAnchor align = TextAnchor::None)
             : Shape(fill, stroke), origin(origin), content(content), font(font)
         {
             if (!valid_num(origin.x) || !valid_num(origin.y)) {
@@ -1025,8 +1029,20 @@ namespace svg
         }
         std::string toString(Layout const & layout) const override
         {
+            auto anchorToStr = [this]() -> std::string {
+                switch (anchor) {
+                case TextAnchor::Start:
+                    return attribute("text-anchor", "start");
+                case TextAnchor::Middle:
+                    return attribute("text-anchor", "middle");
+                case TextAnchor::End:
+                    return attribute("text-anchor", "end");
+                case TextAnchor::None:
+                    return "";
+                }
+            };
             std::stringstream ss;
-            ss << elemStart("text") << serializeId()
+            ss << elemStart("text") << serializeId() << anchorToStr()
                << attribute("x", translateX(origin.x, layout))
                << attribute("y", translateY(origin.y, layout))
                << fill.toString(layout) << stroke.toString(layout) << font.toString(layout)
@@ -1049,6 +1065,7 @@ namespace svg
         Point origin;
         std::string content;
         Font font;
+        TextAnchor anchor;
     };
 
     // TODO: allow "text with background" via filters, see https://stackoverflow.com/a/31013492
