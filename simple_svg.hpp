@@ -425,6 +425,9 @@ namespace svg
             if (!style.empty()) {
                 ss << attribute("style", style);
             }
+            if (!visible) {
+                ss << attribute("visibility", "hidden");
+            }
             return ss.str();
         }
         virtual void offset(Point const & offset) = 0;
@@ -433,6 +436,9 @@ namespace svg
         const std::string& getStyle() const { return style; }
         void setStroke(Stroke s) { stroke = s; }
         void setStyle(const std::string &new_style) { style = new_style; }
+        bool isVisible() const { return visible; }
+        void hide() { visible = false; }
+        void show() { visible = true; }
         /**
          * z order of SVG elements in the document. Default is zero which equals the order of insertion, that is,
          * an element A that is inserted after an element B overlays it because A is drawn after (and possibly over) B.
@@ -446,6 +452,7 @@ namespace svg
     protected:
         Stroke stroke;
         std::string style;
+        bool visible = true;
     };
 
     // All SVG entities (shapes) that can be filled (that is, Circle, Ellipse, Rectangle, Polygon, Path, and Text)
