@@ -1057,7 +1057,8 @@ namespace svg
         Text(Point const & origin, std::string const & content, Fill const & fill = Fill(),
              Font const & font = Font(), Stroke const & stroke = Stroke(),
              TextAnchor align = TextAnchor::None)
-            : SurfaceShape(fill, stroke), origin(origin), content(content), font(font)
+            : SurfaceShape(fill, stroke), origin(origin), content(content), font(font),
+              anchor(align)
         {
             if (!valid_num(origin.x) || !valid_num(origin.y)) {
                 std::cerr << "Infs or NaNs provided to svg::Text()." << std::endl;
@@ -1069,7 +1070,7 @@ namespace svg
         std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
-            ss << elemStart("text") << serializeId(); //<< anchorToStr()
+            ss << elemStart("text") << serializeId();
             switch (anchor) {
             case TextAnchor::Start:
                 ss << attribute("text-anchor", "start"); break;
