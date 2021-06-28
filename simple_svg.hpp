@@ -222,7 +222,7 @@ namespace svg
     class Identifiable
     {
     public:
-      Identifiable(const std::string &id = {}) {}
+      Identifiable(const std::string &identifier = {}) : id(identifier) { }
       const std::string& getId() const { return id; }
       void setId(const std::string &new_id = {}) { id = new_id; }
       std::string randomId(size_t len)
