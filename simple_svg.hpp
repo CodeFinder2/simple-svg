@@ -411,19 +411,28 @@ namespace svg
         std::string family;
     };
 
+    // All SVG entities (shapes) than have a stroke (that is, Line, Polyline, and all listed for "SurfaceShape")
     class Shape : public Serializeable, public Identifiable
     {
     public:
-        Shape(Fill const & fill = Fill(), Stroke const & stroke = Stroke(), int z_order = 0, const std::string& shape_id = {})
-            : z(z_order), fill(fill), stroke(stroke), Identifiable(shape_id) { }
+        Shape(Stroke const & stroke = Stroke(), int z_order = 0, const std::string& shape_id = {})
+            : z(z_order), stroke(stroke), Identifiable(shape_id) { }
         virtual ~Shape() { }
-        virtual std::string toString(Layout const & layout) const = 0;
+        std::string toString(Layout const & layout) const override
+        {
+            std::stringstream ss;
+            ss << stroke.toString(layout);
+            if (!style.empty()) {
+                ss << attribute("style", style);
+            }
+            return ss.str();
+        }
         virtual void offset(Point const & offset) = 0;
         virtual std::unique_ptr<Shape> clone() const = 0;
-        Fill getFill() const { return fill; }
         Stroke getStroke() const { return stroke; }
-        void setFill(Fill f) { fill = f; }
+        const std::string& getStyle() const { return style; }
         void setStroke(Stroke s) { stroke = s; }
+        void setStyle(const std::string &new_style) { style = new_style; }
         /**
          * z order of SVG elements in the document. Default is zero which equals the order of insertion, that is,
          * an element A that is inserted after an element B overlays it because A is drawn after (and possibly over) B.
@@ -435,8 +444,25 @@ namespace svg
          */
         int z;
     protected:
-        Fill fill;
         Stroke stroke;
+        std::string style;
+    };
+
+    // All SVG entities (shapes) that can be filled (that is, Circle, Ellipse, Rectangle, Polygon, Path, and Text)
+    class SurfaceShape : public Shape
+    {
+    public:
+        SurfaceShape(Fill const & fill = Fill(), Stroke const & stroke = Stroke(), int z_order = 0, const std::string& shape_id = {})
+            : Shape(stroke, z_order, shape_id), fill(fill) { }
+        std::string toString(Layout const & layout) const override
+        {
+            return Shape::toString(layout) + fill.toString(layout);
+        }
+        void setFill(Fill f) { fill = f; }
+        Fill getFill() const { return fill; }
+    protected:
+        Fill fill;
+        virtual ~SurfaceShape() { }
     };
 
     class Marker : public Serializeable, public Identifiable
@@ -653,12 +679,12 @@ namespace svg
         return combination_str;
     }
 
-    class Circle : public Shape
+    class Circle : public SurfaceShape
     {
     public:
         Circle(Point const & center, double diameter, Fill const & fill,
-            Stroke const & stroke = Stroke())
-            : Shape(fill, stroke), center(center), radius(diameter / 2)
+               Stroke const & stroke = Stroke())
+            : SurfaceShape(fill, stroke), center(center), radius(diameter / 2)
         {
             if (!valid_num(center.x) || !valid_num(center.y) || !valid_num(diameter)) {
                 std::cerr << "Infs or NaNs provided to svg::Circle()." << std::endl;
@@ -670,8 +696,8 @@ namespace svg
             ss << elemStart("circle") << serializeId()
                << attribute("cx", translateX(center.x, layout))
                << attribute("cy", translateY(center.y, layout))
-               << attribute("r", translateScale(radius, layout)) << fill.toString(layout)
-               << stroke.toString(layout) << emptyElemEnd();
+               << attribute("r", translateScale(radius, layout))
+               << SurfaceShape::toString(layout) << emptyElemEnd();
             return ss.str();
         }
         void offset(Point const & offset) override
@@ -691,12 +717,12 @@ namespace svg
         double radius;
     };
 
-    class Elipse : public Shape
+    class Elipse : public SurfaceShape
     {
     public:
         Elipse(Point const & center, double width, double height,
             Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : Shape(fill, stroke), center(center), radius_width(width / 2.0),
+            : SurfaceShape(fill, stroke), center(center), radius_width(width / 2.0),
               radius_height(height / 2.0)
         {
             if (!valid_num(center.x) || !valid_num(center.y) || !valid_num(width) || !valid_num(height)) {
@@ -711,7 +737,7 @@ namespace svg
                << attribute("cy", translateY(center.y, layout))
                << attribute("rx", translateScale(radius_width, layout))
                << attribute("ry", translateScale(radius_height, layout))
-               << fill.toString(layout) << stroke.toString(layout) << emptyElemEnd();
+               << SurfaceShape::toString(layout) << emptyElemEnd();
             return ss.str();
         }
         void offset(Point const & offset) override
@@ -732,7 +758,7 @@ namespace svg
         double radius_height;
     };
 
-    class Rectangle : public Shape
+    class Rectangle : public SurfaceShape
     {
     public:
         /**
@@ -745,8 +771,7 @@ namespace svg
          */
         Rectangle(Point const & edge, double width, double height,
             Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : Shape(fill, stroke), edge(edge), width(width),
-            height(height)
+            : SurfaceShape(fill, stroke), edge(edge), width(width), height(height)
         {
             if (!valid_num(edge.x) || !valid_num(edge.y) || !valid_num(width) || !valid_num(height)) {
                 std::cerr << "Infs or NaNs provided to svg::Rectangle()." << std::endl;
@@ -760,7 +785,7 @@ namespace svg
                << attribute("y", translateY(edge.y, layout))
                << attribute("width", translateScale(width, layout))
                << attribute("height", translateScale(height, layout))
-               << fill.toString(layout) << stroke.toString(layout) << emptyElemEnd();
+               << SurfaceShape::toString(layout) << emptyElemEnd();
             return ss.str();
         }
         void offset(Point const & offset) override
@@ -792,7 +817,7 @@ namespace svg
     {
     public:
         Line(Point const & start_point, Point const & end_point, Stroke const & stroke = Stroke())
-            : Shape(Fill(), stroke), start_point(start_point),
+            : Shape(stroke), start_point(start_point),
               end_point(end_point)
         {
             if (!valid_num(start_point.x) || !valid_num(start_point.y) ||
@@ -808,7 +833,7 @@ namespace svg
                << attribute("y1", translateY(start_point.y, layout))
                << attribute("x2", translateX(end_point.x, layout))
                << attribute("y2", translateY(end_point.y, layout))
-               << stroke.toString(layout) << Markerable::toString(layout) << emptyElemEnd();
+               << Shape::toString(layout) << Markerable::toString(layout) << emptyElemEnd();
             return ss.str();
         }
         void offset(Point const & offset) override
@@ -831,13 +856,13 @@ namespace svg
         Point end_point;
     };
 
-    class Polygon : public Shape
+    class Polygon : public SurfaceShape
     {
     public:
         Polygon(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : Shape(fill, stroke) { }
+            : SurfaceShape(fill, stroke) { }
         Polygon(const std::vector<Point> &pts, Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : Shape(fill, stroke), points(pts)
+            : SurfaceShape(fill, stroke), points(pts)
         {
             for (size_t i = 0; i < pts.size(); ++i) {
                 if (!valid_num(pts[i].x) || !valid_num(pts[i].y)) {
@@ -846,7 +871,7 @@ namespace svg
                 }
             }
         }
-        Polygon(Stroke const & stroke = Stroke()) : Shape(Color::Transparent, stroke) { }
+        Polygon(Stroke const & stroke = Stroke()) : SurfaceShape(Color::Transparent, stroke) { }
         Polygon & operator<<(Point const & point)
         {
             if (!valid_num(point.x) || !valid_num(point.y)) {
@@ -865,7 +890,7 @@ namespace svg
                 ss << translateX(points[i].x, layout) << "," << translateY(points[i].y, layout) << " ";
             ss << "\" ";
 
-            ss << fill.toString(layout) << stroke.toString(layout) << emptyElemEnd();
+            ss << SurfaceShape::toString(layout) << emptyElemEnd();
             return ss.str();
         }
         void offset(Point const & offset) override
@@ -886,13 +911,13 @@ namespace svg
         std::vector<Point> points;
     };
 
-    class Path : public Shape
+    class Path : public SurfaceShape
     {
     public:
         Path(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : Shape(fill, stroke)
+            : SurfaceShape(fill, stroke)
         { startNewSubPath(); }
-        Path(Stroke const & stroke = Stroke()) : Shape(Color::Transparent, stroke)
+        Path(Stroke const & stroke = Stroke()) : SurfaceShape(Color::Transparent, stroke)
         {  startNewSubPath(); }
         Path & operator<<(Point const & point)
         {
@@ -928,7 +953,7 @@ namespace svg
           ss << "\" ";
           ss << "fill-rule=\"evenodd\" ";
 
-          ss << fill.toString(layout) << stroke.toString(layout) << emptyElemEnd();
+          ss << SurfaceShape::toString(layout) << emptyElemEnd();
           return ss.str();
         }
 
@@ -956,12 +981,9 @@ namespace svg
     class Polyline : public Shape, public Markerable
     {
     public:
-        Polyline(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : Shape(fill, stroke) { }
-        Polyline(Stroke const & stroke = Stroke()) : Shape(Color::Transparent, stroke) { }
-        Polyline(std::vector<Point> const & pts,
-            Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : Shape(fill, stroke), points(pts)
+        Polyline(Stroke const & stroke = Stroke()) : Shape(stroke) { }
+        Polyline(std::vector<Point> const & pts, Stroke const & stroke = Stroke())
+            : Shape(stroke), points(pts)
         {
             for (size_t i = 0; i < pts.size(); ++i) {
                 if (!valid_num(pts[i].x) || !valid_num(pts[i].y)) {
@@ -981,15 +1003,14 @@ namespace svg
         std::string toString(Layout const & layout) const override
         {
             std::stringstream ss;
-            ss << elemStart("polyline") << serializeId();
+            ss << elemStart("polyline") << serializeId() << attribute("fill", "none");
 
             ss << "points=\"";
             for (unsigned i = 0; i < points.size(); ++i)
                 ss << translateX(points[i].x, layout) << "," << translateY(points[i].y, layout) << " ";
             ss << "\" ";
 
-            ss << fill.toString(layout) << stroke.toString(layout)
-               << Markerable::toString(layout) << emptyElemEnd();
+            ss << Shape::toString(layout) << Markerable::toString(layout) << emptyElemEnd();
             return ss.str();
         }
         void offset(Point const & offset) override
@@ -1012,13 +1033,13 @@ namespace svg
     // None will not create any extra SVG/XML and equals "Start" (the default).
     enum class TextAnchor { Start, Middle, End, None };
 
-    class Text : public Shape
+    class Text : public SurfaceShape
     {
     public:
         Text(Point const & origin, std::string const & content, Fill const & fill = Fill(),
              Font const & font = Font(), Stroke const & stroke = Stroke(),
              TextAnchor align = TextAnchor::None)
-            : Shape(fill, stroke), origin(origin), content(content), font(font)
+            : SurfaceShape(fill, stroke), origin(origin), content(content), font(font)
         {
             if (!valid_num(origin.x) || !valid_num(origin.y)) {
                 std::cerr << "Infs or NaNs provided to svg::Text()." << std::endl;
@@ -1045,7 +1066,7 @@ namespace svg
             ss << elemStart("text") << serializeId() << anchorToStr()
                << attribute("x", translateX(origin.x, layout))
                << attribute("y", translateY(origin.y, layout))
-               << fill.toString(layout) << stroke.toString(layout) << font.toString(layout)
+               << SurfaceShape::toString(layout) << font.toString(layout)
                << ">" << content << elemEnd("text");
             return ss.str();
         }
@@ -1144,7 +1165,7 @@ namespace svg
             double height = dimensions->height * 1.1;
 
             // Draw the axis.
-            Polyline axis(Color::Transparent, axis_stroke);
+            Polyline axis(axis_stroke);
             axis << Point(margin.width, margin.height + height) << Point(margin.width, margin.height)
                 << Point(margin.width + width, margin.height);
 
