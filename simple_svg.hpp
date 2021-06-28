@@ -1062,21 +1062,19 @@ namespace svg
         }
         std::string toString(Layout const & layout) const override
         {
-            auto anchorToStr = [this]() -> std::string {
-                switch (anchor) {
-                case TextAnchor::Start:
-                    return attribute("text-anchor", "start");
-                case TextAnchor::Middle:
-                    return attribute("text-anchor", "middle");
-                case TextAnchor::End:
-                    return attribute("text-anchor", "end");
-                case TextAnchor::None:
-                    return "";
-                }
-            };
             std::stringstream ss;
-            ss << elemStart("text") << serializeId() << anchorToStr()
-               << attribute("x", translateX(origin.x, layout))
+            ss << elemStart("text") << serializeId(); //<< anchorToStr()
+            switch (anchor) {
+            case TextAnchor::Start:
+                ss << attribute("text-anchor", "start"); break;
+            case TextAnchor::Middle:
+                ss << attribute("text-anchor", "middle"); break;
+            case TextAnchor::End:
+                ss << attribute("text-anchor", "end"); break;
+            case TextAnchor::None:
+                break;
+            }
+            ss << attribute("x", translateX(origin.x, layout))
                << attribute("y", translateY(origin.y, layout))
                << SurfaceShape::toString(layout) << font.toString(layout)
                << ">" << content << elemEnd("text");
