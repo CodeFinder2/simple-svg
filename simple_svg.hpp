@@ -917,6 +917,18 @@ namespace svg
         Path(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
             : SurfaceShape(fill, stroke)
         { startNewSubPath(); }
+        Path(std::vector<Point> const & pts, Fill const & fill = Fill(), Stroke const & stroke = Stroke())
+            : SurfaceShape(fill, stroke)
+        {
+            for (size_t i = 0; i < pts.size(); ++i) {
+                if (!valid_num(pts[i].x) || !valid_num(pts[i].y)) {
+                    std::cerr << "Infs or NaNs provided to svg::Path()." << std::endl;
+                    break;
+                }
+            }
+            startNewSubPath();
+            paths.back() = pts;
+        }
         Path(Stroke const & stroke = Stroke()) : SurfaceShape(Color::Transparent, stroke)
         {  startNewSubPath(); }
         Path & operator<<(Point const & point)
