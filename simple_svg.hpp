@@ -770,10 +770,11 @@ namespace svg
          * \param [in] stroke Stroke used to create the boundary contour
          */
         Rectangle(Point const & edge, double width, double height,
-            Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-            : SurfaceShape(fill, stroke), edge(edge), width(width), height(height)
+            Fill const & fill = Fill(), Stroke const & stroke = Stroke(), double rx = 0.0, double ry = 0.0)
+            : SurfaceShape(fill, stroke), edge(edge), width(width), height(height), rx(rx), ry(ry)
         {
-            if (!valid_num(edge.x) || !valid_num(edge.y) || !valid_num(width) || !valid_num(height)) {
+            if (!valid_num(edge.x) || !valid_num(edge.y) || !valid_num(width) || !valid_num(height) ||
+                !valid_num(rx) || !valid_num(ry)) {
                 std::cerr << "Infs or NaNs provided to svg::Rectangle()." << std::endl;
             }
         }
@@ -782,8 +783,11 @@ namespace svg
             std::stringstream ss;
             ss << elemStart("rect") << serializeId()
                << attribute("x", translateX(edge.x, layout))
-               << attribute("y", translateY(edge.y, layout))
-               << attribute("width", translateScale(width, layout))
+               << attribute("y", translateY(edge.y, layout));
+            if (rx > 0.0 || ry > 0.0) {
+                ss << attribute("rx", rx) << attribute("ry", ry);
+            }
+            ss << attribute("width", translateScale(width, layout))
                << attribute("height", translateScale(height, layout))
                << SurfaceShape::toString(layout) << emptyElemEnd();
             return ss.str();
@@ -811,6 +815,8 @@ namespace svg
         Point edge;
         double width;
         double height;
+        double rx; //<! Rounded corner radius in x direction
+        double ry; //<! Rounded corner radius in y direction
     };
 
     class Line : public Shape, public Markerable
