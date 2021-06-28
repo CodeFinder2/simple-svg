@@ -225,7 +225,7 @@ namespace svg
       Identifiable(const std::string &identifier = {}) : id(identifier) { }
       const std::string& getId() const { return id; }
       void setId(const std::string &new_id = {}) { id = new_id; }
-      std::string randomId(size_t len)
+      static std::string random(size_t len = 8)
       {
           std::string tmp_s;
           static const char alphanum[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -233,7 +233,7 @@ namespace svg
           std::srand(unsigned(time(nullptr)));
           tmp_s.reserve(len);
           for (size_t i = 0; i < len; ++i) {
-              tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
+              tmp_s += alphanum[unsigned(rand()) % (sizeof(alphanum) - 1)];
           }
           return tmp_s;
       }
