@@ -80,6 +80,14 @@ namespace svg
         return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
     }
 
+    inline bool ends_with(std::string const & value, std::string const & ending)
+    {
+        if (ending.size() > value.size()) {
+            return false;
+        }
+        return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+    }
+
     inline bool valid_num(double x) { return !std::isinf(x) && !std::isnan(x); }
 
     inline bool equal(double a, double b, double eps = 1e-10) { return std::fabs(a - b) < eps; }
@@ -1208,10 +1216,107 @@ namespace svg
         }
     };
 
+    namespace animation { // still highly experimental
+
+        class Animation : public Serializeable, public Identifiable
+        {
+        public:
+            Animation(const std::string &href, const std::string &begin, const std::string &fill, const std::string &dur)
+                : href(href), begin(begin), fill(fill), dur(dur) { }
+            std::string toString(Layout const & layout) const override
+            {
+                if (href.empty()) {
+                    std::cerr << "warning: no <href> given for animation with id=\"" << getId() << "\"." << std::endl;
+                }
+                std::stringstream ss;
+                ss << serializeId() << attribute("href", "#" + href);
+                if (!begin.empty()) {
+                    ss << attribute("begin", begin);
+                }
+                if (!fill.empty()) {
+                    ss << attribute("fill", fill);
+                }
+                if (!dur.empty()) {
+                    ss << attribute("dur", dur);
+                }
+                return ss.str();
+            }
+            virtual std::unique_ptr<Animation> clone() const = 0;
+        protected:
+            std::string href;
+            std::string begin;
+            std::string fill;
+            std::string dur;
+        };
+
+        class SetAttributeValue : public Animation
+        {
+        public:
+            SetAttributeValue(const std::string &to, const std::string &attribute_name, const std::string &href,
+                              const std::string &begin = {}, const std::string &fill = {},
+                              const std::string &dur = {}, const std::string attribute_type = "CSS")
+                : Animation(href, begin, fill, dur), to(to), attr_name(attribute_name), attr_type(attribute_type) { }
+            std::string toString(Layout const & layout) const override
+            {
+                if (attr_name.empty()) {
+                    std::cerr << "warning: no <attributeName> given for animation with id=\"" << getId() << "\"." << std::endl;
+                }
+                std::stringstream ss;
+                ss << elemStart("set") << Animation::toString(layout) << attribute("to", to)
+                   << attribute("attributeName", attr_name)  << attribute("attributeType", attr_type)
+                   << emptyElemEnd();
+                return ss.str();
+            }
+            std::unique_ptr<Animation> clone() const override
+            {
+                return svg::make_unique<SetAttributeValue>(*this);
+            }
+        private:
+            std::string to;
+            std::string attr_name;
+            std::string attr_type;
+
+        };
+
+        class AnimateMotion : public Animation
+        {
+        public:
+            AnimateMotion(std::vector<Point> pts, const std::string &href,
+                          const std::string &begin = {}, const std::string &fill = {},
+                          const std::string &dur = {}) : Animation(href, begin, fill, dur), points(pts) { }
+            std::string toString(Layout const & layout) const override
+            {
+                if (points.empty()) {
+                    std::cerr << "warning: no <path> points given as animation path for id=\"" << getId() << "\"." << std::endl;
+                }
+                std::stringstream ss;
+                ss << elemStart("animateMotion") << Animation::toString(layout) << "path=";
+                for (size_t i = 0; i < points.size(); ++i) {
+                    if (i == 0) {
+                        ss << "\"M" << points[i].x << "," << points[i].y;
+                    } else {
+                        ss << "L" << points[i].x << "," << points[i].y;
+                    }
+                    if (i < points.size() - 1) {
+                        ss << " ";
+                    }
+                }
+                ss << "\" " << emptyElemEnd();
+                return ss.str();
+            }
+            std::unique_ptr<Animation> clone() const override
+            {
+                return svg::make_unique<AnimateMotion>(*this);
+            }
+        private:
+            std::vector<Point> points;
+        };
+
+    } // end of namespace: animation
+
     class Document
     {
     public:
-        Document() { }
         Document(std::string const & file_name, Layout layout = Layout())
             : file_name(file_name), layout(layout), needs_sorting(false) { }
 
@@ -1221,23 +1326,39 @@ namespace svg
             needs_sorting = needs_sorting || body_nodes.back()->z != 0;
             return *this;
         }
+        Document & operator<<(animation::Animation const & animation)
+        {
+            animation_nodes.push_back(animation.clone());
+            return *this;
+        }
         std::string toString()
         {
             std::stringstream ss;
             writeToStream(ss);
             return ss.str();
         }
-        bool save()
+        bool save(bool auto_append_extension = true)
         {
+            if (auto_append_extension) {
+                // Append ".html" if not already given AND the document contains animations:
+                if (!animation_nodes.empty()) {
+                    if (!ends_with(file_name, ".html")) {
+                        file_name += ".html";
+                    }
+                } else if (!ends_with(file_name, ".svg")) {
+                    file_name += ".svg";
+                }
+            }
             std::ofstream ofs(file_name.c_str());
-            if (!ofs.is_open())
+            if (!ofs.is_open()) {
                 return false;
+            }
 
             writeToStream(ofs);
             return ofs.good();
         }
         Layout getLayout() const { return layout; }
-    private:
+    protected:
         void writeToStream(std::ostream& str)
         {
             str << "<?xml " << attribute("version", "1.0") << attribute("standalone", "no") << "?>\n"
@@ -1250,7 +1371,7 @@ namespace svg
                 << attribute("version", svgVersion()) << ">\n";
             if (needs_sorting) {
                 std::stable_sort(body_nodes.begin(), body_nodes.end(),
-                          [](const std::unique_ptr<Shape> &a, const std::unique_ptr<Shape> &b){
+                                 [](const std::unique_ptr<Shape> &a, const std::unique_ptr<Shape> &b){
                     // Ascending order rgd. z, keep equal z's (especially the default z=0) in the
                     // order of insertions:
                     return a->z < b->z;
@@ -1285,15 +1406,19 @@ namespace svg
             for (const auto& body_node : body_nodes) {
                 str << body_node->toString(layout);
             }
+            for (const auto& animation_node : animation_nodes) {
+                str << animation_node->toString(layout);
+            }
             str << elemEnd("svg");
         }
-
         std::string file_name;
         Layout layout;
 
         std::vector<std::unique_ptr<Shape>> body_nodes;
         bool needs_sorting;
+        std::vector<std::unique_ptr<animation::Animation>> animation_nodes;
     };
-}
 
-#endif
+} // end of namespace: svg
+
+#endif // SIMPLE_SVG_HPP
