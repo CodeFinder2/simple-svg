@@ -414,6 +414,10 @@ namespace svg
             ss << attribute("font-size", translateScale(size, layout)) << attribute("font-family", family);
             return ss.str();
         }
+        double getSize() const { return size; }
+        void setSize(double s) { size = s; }
+        const std::string &getFamily() const { return family; }
+        void setFamily(const std::string &f) { family = f; }
     private:
         double size;
         std::string family;
