@@ -1341,6 +1341,7 @@ namespace svg
             writeToStream(ss);
             return ss.str();
         }
+        bool isAnimated() const { return !animation_nodes.empty(); }
         bool save(bool auto_append_extension = true)
         {
             if (auto_append_extension) {
