@@ -235,6 +235,7 @@ public:
 class Identifiable {
 public:
   Identifiable(const std::string &identifier = {}) : id(identifier) { }
+  virtual ~Identifiable() { }
   const std::string& getId() const { return id; }
   void setId(const std::string &new_id = {}) { id = new_id; }
   static std::string random(size_t len = 8)
