@@ -353,7 +353,7 @@ public:
           dashoffset(stroke_dashoffset), opacity(stroke_opacity)
     {
         if (!valid_num(width) || !valid_num(stroke_miterlimit) ||
-            !valid_num(stroke_oWpacity)) {
+            !valid_num(stroke_opacity)) {
             std::cerr << "Infs or NaNs provided to svg::Stroke()." << std::endl;
         }
         if (stroke_opacity < 0 || stroke_opacity > 1) {
