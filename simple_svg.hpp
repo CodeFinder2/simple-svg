@@ -243,7 +243,11 @@ public:
       std::string tmp_s;
       static const char alphanum[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-      std::srand(unsigned(time(nullptr)));
+      static bool init_once = false;
+      if (!init_once) { // one-shot initialization upon first entering
+        std::srand(unsigned(time(nullptr)));
+        init_once = true;
+      }
       tmp_s.reserve(len);
       for (size_t i = 0; i < len; ++i) {
           tmp_s += alphanum[unsigned(rand()) % (sizeof(alphanum) - 1)];
