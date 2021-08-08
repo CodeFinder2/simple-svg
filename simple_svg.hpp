@@ -204,6 +204,63 @@ struct Layout {
     Point origin_offset;
 };
 
+/**
+ * pt
+ *  x---------+
+ *  |         |
+ *  h         |
+ *  |         |
+ *  +----w----+
+ */
+struct RectData {
+    RectData(double x = 0.0, double y = 0.0, double width = 0.0, double height = 0.0)
+        : pt(x, y), w(width), h(height) { }
+    // Always upper left corner coordinate of this rect
+    Point pt;
+    // width (x) and height (y) of this rect
+    double w;
+    double h;
+    // Updates *this with the bounding box of *this and rd while respecting the given layout (more
+    // specifically, its origin).
+    RectData& merge(const RectData &rd, const Layout &l)
+    {
+        auto old_x = pt.x, old_w = w, old_y = pt.y, old_h = h;
+        switch (l.origin) {
+        case Layout::TopLeft: // +x leftwards, +y downwards
+            pt.x = std::min(old_x, rd.pt.x);
+            w = std::max(old_x + old_w, rd.pt.x + rd.w) - pt.x;
+            pt.y = std::min(old_y, rd.pt.y);
+            h = std::max(old_y + old_h, rd.pt.y + rd.h) - pt.y;
+            break;
+        case Layout::BottomLeft: // +x leftwards, +y upwards
+            pt.x = std::min(old_x, rd.pt.x);
+            w = std::max(old_x + old_w, rd.pt.x + rd.w) - pt.x;
+            pt.y = std::min(old_y, rd.pt.y);
+            h = std::max(old_y + old_h, rd.pt.y + rd.h) - pt.y;
+            // We have to transform to *upper* left (currently *lower* left):
+            pt.y += h;
+            break;
+        case Layout::TopRight:
+            pt.x = std::min(old_x, rd.pt.x);
+            w = std::max(old_x + old_w, rd.pt.x + rd.w) - pt.x;
+            pt.x += w; // transform from upper right to upper left
+            pt.y = std::min(old_y, rd.pt.y);
+            h = std::max(old_y + old_h, rd.pt.y + rd.h) - pt.y;
+            break;
+        case Layout::BottomRight:
+            pt.x = std::min(old_x, rd.pt.x);
+            w = std::max(old_x + old_w, rd.pt.x + rd.w) - pt.x;
+            pt.x += w; // transform from upper right to upper left
+            pt.y = std::min(old_y, rd.pt.y);
+            h = std::max(old_y + old_h, rd.pt.y + rd.h) - pt.y;
+            pt.y += h; // again, transform to *upper* right (previously *lower* right)
+            break;
+        default: throw std::runtime_error("unknown origin in provided layout detected");
+        }
+        return *this;
+    }
+};
+
 // Convert coordinates in user space to SVG native space.
 inline double translateX(double x, Layout const & layout)
 {
@@ -225,6 +282,37 @@ inline double translateY(double y, Layout const & layout)
 inline double translateScale(double dimension, Layout const & layout)
 {
     return dimension * layout.scale;
+}
+
+namespace utils {
+
+inline RectData getBoundingBox(const std::vector<Point> &pts, Layout const & l)
+{
+    if (pts.empty()) {
+        return {}; // empty
+    }
+    Point min_pt(translateX(pts[0].x, l), translateY(pts[0].y, l)), max_pt = min_pt;
+    for (std::vector<Point>::size_type i = 1; i < pts.size(); ++i) {
+        min_pt.x = std::min(min_pt.x, translateX(pts[i].x, l));
+        min_pt.y = std::min(min_pt.y, translateY(pts[i].y, l));
+        max_pt.x = std::max(max_pt.x, translateX(pts[i].x, l));
+        max_pt.y = std::max(max_pt.y, translateY(pts[i].y, l));
+    }
+    const double DX = max_pt.x - min_pt.x, DY = max_pt.y - min_pt.y;
+    switch (l.origin) {
+    case Layout::TopLeft:
+        return RectData(min_pt.x, min_pt.y, DX, DY);
+    case Layout::BottomLeft:
+        // Equivalent to (for y): min_pt + DY = min_pt + (max_pt.y - min_pt.y) = max_pt.y
+        return RectData(min_pt.x, max_pt.y, DX, DY);
+    case Layout::TopRight:
+        return RectData(max_pt.x, min_pt.y, DX, DY);
+    case Layout::BottomRight:
+        return RectData(max_pt.x, max_pt.y, DX, DY);
+    default: throw std::runtime_error("unknown origin in provided layout detected");
+    }
+}
+
 }
 
 class Serializeable {
@@ -454,6 +542,7 @@ public:
     bool isVisible() const { return visible; }
     void hide() { visible = false; }
     void show() { visible = true; }
+    virtual RectData getBoundingBox(Layout const & l) const = 0;
     /**
      * z order of SVG elements in the document. Default is zero which equals the order of insertion, that is,
      * an element A that is inserted after an element B overlays it because A is drawn after (and possibly over) B.
@@ -731,6 +820,18 @@ public:
     {
         return svg::make_unique<Circle>(*this);
     }
+    RectData getBoundingBox(Layout const & l) const override
+    {
+        const auto R = translateScale(radius, l), TCX = translateX(center.x, l),
+                   TCY = translateY(center.y, l);
+        switch (l.origin) {
+        case Layout::TopLeft: return RectData(TCX - R, TCY - R, R * 2, R * 2);
+        case Layout::BottomLeft: return RectData(TCX - R, TCY + R, R * 2, R * 2);
+        case Layout::TopRight: return RectData(TCX + R, TCY - R, R * 2, R * 2);
+        case Layout::BottomRight: return RectData(TCX + R, TCY + R, R * 2, R * 2);
+        default: throw std::runtime_error("unknown origin in provided layout detected");
+        }
+    }
 private:
     Point center;
     double radius;
@@ -769,6 +870,18 @@ public:
     std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<Elipse>(*this);
+    }
+    RectData getBoundingBox(Layout const & l) const override
+    {
+        const auto RW = translateScale(radius_width, l), RH = translateScale(radius_height, l),
+                   TCX = translateX(center.x, l), TCY = translateY(center.y, l);
+        switch (l.origin) {
+        case Layout::TopLeft: return RectData(TCX - RW, TCY - RH, RW * 2, RH * 2);
+        case Layout::BottomLeft: return RectData(TCX - RW, TCY + RH, RW * 2, RH * 2);
+        case Layout::TopRight: return RectData(TCX + RW, TCY - RH, RW * 2, RH * 2);
+        case Layout::BottomRight: return RectData(TCX + RW, TCY + RH, RW * 2, RH * 2);
+        default: throw std::runtime_error("unknown origin in provided layout detected");
+        }
     }
 private:
     Point center;
@@ -828,6 +941,11 @@ public:
     {
         return svg::make_unique<Rectangle>(*this);
     }
+    RectData getBoundingBox(Layout const & l) const override
+    {
+        return RectData(translateX(edge.x, l), translateX(edge.y, l),
+                        translateScale(width, l), translateScale(height, l));
+    }
 private:
     Point edge;
     double width;
@@ -872,6 +990,10 @@ public:
     std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<Line>(*this);
+    }
+    RectData getBoundingBox(Layout const & l) const override
+    {
+        return utils::getBoundingBox({ start_point, end_point }, l);
     }
 private:
     Point start_point;
@@ -928,6 +1050,10 @@ public:
     std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<Polygon>(*this);
+    }
+    RectData getBoundingBox(Layout const & l) const override
+    {
+        return utils::getBoundingBox(points, l);
     }
 private:
     std::vector<Point> points;
@@ -1005,6 +1131,17 @@ public:
     {
         return svg::make_unique<Path>(*this);
     }
+    RectData getBoundingBox(Layout const & l) const override
+    {
+        if (paths.empty()) {
+            return {};
+        }
+        RectData rd = utils::getBoundingBox(paths[0], l);
+        for (decltype(paths)::size_type i = 1; i < paths.size(); ++i) {
+            rd.merge(utils::getBoundingBox(paths[i], l), l);
+        }
+        return rd;
+    }
 private:
     std::vector<std::vector<Point>> paths;
 };
@@ -1057,6 +1194,10 @@ public:
     std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<Polyline>(*this);
+    }
+    RectData getBoundingBox(Layout const & l) const override
+    {
+        return utils::getBoundingBox(points, l);
     }
     std::vector<Point> points;
 };
@@ -1111,6 +1252,12 @@ public:
     {
         return svg::make_unique<Text>(*this);
     }
+    RectData getBoundingBox(Layout const & l) const override
+    {
+        // FIXME: this is just a very rough (aka bad) approximation
+        return RectData(translateX(origin.x, l), translateX(origin.y, l),
+                        content.size() * font.getSize(), font.getSize());
+    }
 private:
     Point origin;
     std::string content;
@@ -1161,6 +1308,17 @@ public:
     std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<LineChart>(*this);
+    }
+    RectData getBoundingBox(Layout const & l) const override
+    {
+        if (polylines.empty()) {
+            return {};
+        }
+        RectData rd = utils::getBoundingBox(polylines[0].points, l);
+        for (decltype(polylines)::size_type i = 1; i < polylines.size(); ++i) {
+            rd.merge(utils::getBoundingBox(polylines[i].points, l), l);
+        }
+        return rd;
     }
 private:
     Stroke axis_stroke;
@@ -1358,15 +1516,28 @@ public:
         return ofs.good();
     }
     Layout getLayout() const { return layout; }
+    void setLayout(const Layout &l) { layout = l; }
+    RectData getBoundingBox(const Layout &l) const
+    {
+        if (body_nodes.empty()) {
+            return {};
+        }
+        RectData rd(body_nodes[0]->getBoundingBox(l));
+        for (size_t i = 1; i < body_nodes.size(); ++i) {
+            rd.merge(body_nodes[i]->getBoundingBox(l), l);
+        }
+        return rd;
+    }
 protected:
     void writeToStream(std::ostream& str)
     {
+        auto bb = getBoundingBox(layout);
         str << "<?xml " << attribute("version", "1.0") << attribute("standalone", "no") << "?>\n"
             << "<!-- Generator: " << libraryName() << " (https://github.com/CodeFinder2/simple-svg), Version: " << libraryVersion() << " -->\n"
             << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG " << svgVersion() << "//EN\" "
             << "\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n<svg "
-            << attribute("width", layout.dimensions.width, "px")
-            << attribute("height", layout.dimensions.height, "px")
+            << attribute("width", bb.w + abs(bb.pt.x), "px") // FIXME, and add auto-mode in Docuemnt::ctor
+            << attribute("height", bb.h + abs(bb.pt.y), "px")
             << attribute("xmlns", "http://www.w3.org/2000/svg")
             << attribute("version", svgVersion()) << ">\n";
         if (needs_sorting) {
