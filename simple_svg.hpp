@@ -149,10 +149,11 @@ struct Point {
     double x;
     double y;
 };
+
 inline optional<Point> getMinPoint(std::vector<Point> const & points)
 {
     if (points.empty()) {
-        return optional<Point>();
+        return {};
     }
 
     Point min = points[0];
@@ -166,10 +167,11 @@ inline optional<Point> getMinPoint(std::vector<Point> const & points)
     }
     return optional<Point>(min);
 }
+
 inline optional<Point> getMaxPoint(std::vector<Point> const & points)
 {
     if (points.empty()) {
-        return optional<Point>();
+        return {};
     }
 
     Point max = points[0];
@@ -229,7 +231,7 @@ class Serializeable {
 public:
     Serializeable() { }
     virtual ~Serializeable() { }
-    virtual std::string toString(Layout const & layout) const = 0;
+    virtual std::string toString(Layout const & l) const = 0;
 };
 
 class Identifiable {
@@ -334,10 +336,10 @@ public:
     }
     Fill(Color color = Color::Transparent)
         : color(color), opacity(1.0) { }
-    std::string toString(Layout const & layout) const
+    std::string toString(Layout const & l) const
     {
         std::stringstream ss;
-        ss << attribute("fill", color.toString(layout));
+        ss << attribute("fill", color.toString(l));
         if (opacity < 1.0) {
             ss << attribute("fill-opacity", opacity);
         }
@@ -365,7 +367,7 @@ public:
             std::cerr << "Stroke::Stroke(): stroke_opacity=" << stroke_opacity << " is out of range [0,1]." << std::endl;
         }
     }
-    std::string toString(Layout const & layout) const
+    std::string toString(Layout const & l) const
     {
         // If stroke width is invalid.
         if (width < 0) {
@@ -373,12 +375,12 @@ public:
         }
 
         std::stringstream ss;
-        ss << attribute("stroke-width", translateScale(width, layout))
-           << attribute("stroke", color.toString(layout));
+        ss << attribute("stroke-width", translateScale(width, l))
+           << attribute("stroke", color.toString(l));
         if (miterlimit >= 0) {
-            ss << attribute("stroke-miterlimit", translateScale(miterlimit, layout));
+            ss << attribute("stroke-miterlimit", translateScale(miterlimit, l));
         }
-        ss << attribute("stroke-dashoffset", translateScale(dashoffset, layout));
+        ss << attribute("stroke-dashoffset", translateScale(dashoffset, l));
         std::stringstream tmp;
         for (size_t i = 0; i < dasharray.size(); ++i) {
             tmp << dasharray[i];
@@ -410,10 +412,10 @@ private:
 class Font : public Serializeable {
 public:
     Font(double size = 12, std::string const & family = "Verdana") : size(size), family(family) { }
-    std::string toString(Layout const & layout) const
+    std::string toString(Layout const & l) const
     {
         std::stringstream ss;
-        ss << attribute("font-size", translateScale(size, layout)) << attribute("font-family", family);
+        ss << attribute("font-size", translateScale(size, l)) << attribute("font-family", family);
         return ss.str();
     }
     double getSize() const { return size; }
@@ -431,10 +433,10 @@ public:
     Shape(Stroke const & stroke = Stroke(), int z_order = 0, const std::string& shape_id = {})
         : z(z_order), stroke(stroke), Identifiable(shape_id) { }
     virtual ~Shape() { }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         std::stringstream ss;
-        ss << stroke.toString(layout);
+        ss << stroke.toString(l);
         if (!style.empty()) {
             ss << attribute("style", style);
         }
@@ -473,9 +475,9 @@ class SurfaceShape : public Shape {
 public:
     SurfaceShape(Fill const & fill = Fill(), Stroke const & stroke = Stroke(), int z_order = 0, const std::string& shape_id = {})
         : Shape(stroke, z_order, shape_id), fill(fill) { }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
-        return Shape::toString(layout) + fill.toString(layout);
+        return Shape::toString(l) + fill.toString(l);
     }
     void setFill(Fill f) { fill = f; }
     Fill getFill() const { return fill; }
@@ -707,14 +709,14 @@ public:
             std::cerr << "Infs or NaNs provided to svg::Circle()." << std::endl;
         }
     }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         std::stringstream ss;
         ss << elemStart("circle") << serializeId()
-           << attribute("cx", translateX(center.x, layout))
-           << attribute("cy", translateY(center.y, layout))
-           << attribute("r", translateScale(radius, layout))
-           << SurfaceShape::toString(layout) << emptyElemEnd();
+           << attribute("cx", translateX(center.x, l))
+           << attribute("cy", translateY(center.y, l))
+           << attribute("r", translateScale(radius, l))
+           << SurfaceShape::toString(l) << emptyElemEnd();
         return ss.str();
     }
     void offset(Point const & offset) override
@@ -725,7 +727,7 @@ public:
         center.x += offset.x;
         center.y += offset.y;
     }
-    virtual std::unique_ptr<Shape> clone() const override
+    std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<Circle>(*this);
     }
@@ -745,15 +747,15 @@ public:
             std::cerr << "Infs or NaNs provided to svg::Elipse()." << std::endl;
         }
     }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         std::stringstream ss;
         ss << elemStart("ellipse")<< serializeId()
-           << attribute("cx", translateX(center.x, layout))
-           << attribute("cy", translateY(center.y, layout))
-           << attribute("rx", translateScale(radius_width, layout))
-           << attribute("ry", translateScale(radius_height, layout))
-           << SurfaceShape::toString(layout) << emptyElemEnd();
+           << attribute("cx", translateX(center.x, l))
+           << attribute("cy", translateY(center.y, l))
+           << attribute("rx", translateScale(radius_width, l))
+           << attribute("ry", translateScale(radius_height, l))
+           << SurfaceShape::toString(l) << emptyElemEnd();
         return ss.str();
     }
     void offset(Point const & offset) override
@@ -764,7 +766,7 @@ public:
         center.x += offset.x;
         center.y += offset.y;
     }
-    virtual std::unique_ptr<Shape> clone() const override
+    std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<Elipse>(*this);
     }
@@ -777,7 +779,7 @@ private:
 class Rectangle : public SurfaceShape {
 public:
     /**
-     * Creates a rectangle (shape).
+     * Creates a rectangle (fillable shape).
      * \param [in] edge Upper left corner of the rectangle
      * \param [in] width Width of the rectangle
      * \param [in] height Height of the rectangle
@@ -793,18 +795,18 @@ public:
             std::cerr << "Infs or NaNs provided to svg::Rectangle()." << std::endl;
         }
     }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         std::stringstream ss;
         ss << elemStart("rect") << serializeId()
-           << attribute("x", translateX(edge.x, layout))
-           << attribute("y", translateY(edge.y, layout));
+           << attribute("x", translateX(edge.x, l))
+           << attribute("y", translateY(edge.y, l));
         if (rx > 0.0 || ry > 0.0) {
             ss << attribute("rx", rx) << attribute("ry", ry);
         }
-        ss << attribute("width", translateScale(width, layout))
-           << attribute("height", translateScale(height, layout))
-           << SurfaceShape::toString(layout) << emptyElemEnd();
+        ss << attribute("width", translateScale(width, l))
+           << attribute("height", translateScale(height, l))
+           << SurfaceShape::toString(l) << emptyElemEnd();
         return ss.str();
     }
     void offset(Point const & offset) override
@@ -822,7 +824,7 @@ public:
         }
         return Rectangle(Point(pos.x - width / 2.0, pos.y - height / 2.0), width, height, fill, stroke);
     }
-    virtual std::unique_ptr<Shape> clone() const override
+    std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<Rectangle>(*this);
     }
@@ -845,15 +847,15 @@ public:
             std::cerr << "Infs or NaNs provided to svg::Line()." << std::endl;
         }
     }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         std::stringstream ss;
         ss << elemStart("line") << serializeId()
-           << attribute("x1", translateX(start_point.x, layout))
-           << attribute("y1", translateY(start_point.y, layout))
-           << attribute("x2", translateX(end_point.x, layout))
-           << attribute("y2", translateY(end_point.y, layout))
-           << Shape::toString(layout) << Markerable::toString(layout) << emptyElemEnd();
+           << attribute("x1", translateX(start_point.x, l))
+           << attribute("y1", translateY(start_point.y, l))
+           << attribute("x2", translateX(end_point.x, l))
+           << attribute("y2", translateY(end_point.y, l))
+           << Shape::toString(l) << Markerable::toString(l) << emptyElemEnd();
         return ss.str();
     }
     void offset(Point const & offset) override
@@ -867,7 +869,7 @@ public:
         end_point.x += offset.x;
         end_point.y += offset.y;
     }
-    virtual std::unique_ptr<Shape> clone() const override
+    std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<Line>(*this);
     }
@@ -899,18 +901,18 @@ public:
         points.push_back(point);
         return *this;
     }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         std::stringstream ss;
         ss << elemStart("polygon") << serializeId();
 
         ss << "points=\"";
-        for (unsigned i = 0; i < points.size(); ++i) {
-            ss << translateX(points[i].x, layout) << "," << translateY(points[i].y, layout) << " ";
+        for (decltype(points)::size_type i = 0; i < points.size(); ++i) {
+            ss << translateX(points[i].x, l) << "," << translateY(points[i].y, l) << " ";
         }
         ss << "\" ";
 
-        ss << SurfaceShape::toString(layout) << emptyElemEnd();
+        ss << SurfaceShape::toString(l) << emptyElemEnd();
         return ss.str();
     }
     void offset(Point const & offset) override
@@ -918,12 +920,12 @@ public:
         if (!valid_num(offset.x) || !valid_num(offset.y)) {
             std::cerr << "Infs or NaNs provided to svg::Polygon::offset()." << std::endl;
         }
-        for (unsigned i = 0; i < points.size(); ++i) {
+        for (decltype(points)::size_type i = 0; i < points.size(); ++i) {
             points[i].x += offset.x;
             points[i].y += offset.y;
         }
     }
-    virtual std::unique_ptr<Shape> clone() const override
+    std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<Polygon>(*this);
     }
@@ -958,39 +960,35 @@ public:
         paths.back().push_back(point);
         return *this;
     }
-
     void startNewSubPath()
     {
         if (paths.empty() || 0 < paths.back().size()) {
             paths.emplace_back();
         }
     }
-
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         std::stringstream ss;
         ss << elemStart("path") << serializeId();
 
         ss << "d=\"";
-        for (auto const& subpath: paths)
-        {
+        for (auto const& subpath: paths) {
             if (subpath.empty()) {
                 continue;
             }
 
             ss << "M";
             for (auto const& point: subpath) {
-                ss << translateX(point.x, layout) << "," << translateY(point.y, layout) << " ";
+                ss << translateX(point.x, l) << "," << translateY(point.y, l) << " ";
             }
             ss << "z ";
       }
       ss << "\" ";
       ss << "fill-rule=\"evenodd\" ";
 
-      ss << SurfaceShape::toString(layout) << emptyElemEnd();
+      ss << SurfaceShape::toString(l) << emptyElemEnd();
       return ss.str();
     }
-
     void offset(Point const & offset) override
     {
         if (!valid_num(offset.x) || !valid_num(offset.y)) {
@@ -1003,8 +1001,7 @@ public:
             }
         }
     }
-
-    virtual std::unique_ptr<Shape> clone() const override
+    std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<Path>(*this);
     }
@@ -1033,18 +1030,18 @@ public:
         points.push_back(point);
         return *this;
     }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         std::stringstream ss;
         ss << elemStart("polyline") << serializeId() << attribute("fill", "none");
 
         ss << "points=\"";
         for (unsigned i = 0; i < points.size(); ++i) {
-            ss << translateX(points[i].x, layout) << "," << translateY(points[i].y, layout) << " ";
+            ss << translateX(points[i].x, l) << "," << translateY(points[i].y, l) << " ";
         }
         ss << "\" ";
 
-        ss << Shape::toString(layout) << Markerable::toString(layout) << emptyElemEnd();
+        ss << Shape::toString(l) << Markerable::toString(l) << emptyElemEnd();
         return ss.str();
     }
     void offset(Point const & offset) override
@@ -1057,7 +1054,7 @@ public:
             points[i].y += offset.y;
         }
     }
-    virtual std::unique_ptr<Shape> clone() const override
+    std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<Polyline>(*this);
     }
@@ -1082,7 +1079,7 @@ public:
             std::cerr << "Empty string provided to svg::Text()." << std::endl;
         }
     }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         std::stringstream ss;
         ss << elemStart("text") << serializeId();
@@ -1096,9 +1093,9 @@ public:
         case TextAnchor::None:
             break;
         }
-        ss << attribute("x", translateX(origin.x, layout))
-           << attribute("y", translateY(origin.y, layout))
-           << SurfaceShape::toString(layout) << font.toString(layout)
+        ss << attribute("x", translateX(origin.x, l))
+           << attribute("y", translateY(origin.y, l))
+           << SurfaceShape::toString(l) << font.toString(l)
            << ">" << content << elemEnd("text");
         return ss.str();
     }
@@ -1110,7 +1107,7 @@ public:
         origin.x += offset.x;
         origin.y += offset.y;
     }
-    virtual std::unique_ptr<Shape> clone() const override
+    std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<Text>(*this);
     }
@@ -1124,6 +1121,7 @@ private:
 // TODO: allow "text with background" via filters, see https://stackoverflow.com/a/31013492
 
 // Sample charting class.
+// FIXME: this design is bad since "Polyline::points" needs to be public (in contrast to all other classes)...
 class LineChart : public Shape {
 public:
     LineChart(Dimensions margin = Dimensions(),
@@ -1138,7 +1136,7 @@ public:
         polylines.push_back(polyline);
         return *this;
     }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         if (polylines.empty()) {
             return "";
@@ -1146,10 +1144,10 @@ public:
 
         std::string ret;
         for (unsigned i = 0; i < polylines.size(); ++i) {
-            ret += polylineToString(polylines[i], layout);
+            ret += polylineToString(polylines[i], l);
         }
 
-        return ret + axisString(layout);
+        return ret + axisString(l);
     }
     void offset(Point const & offset) override
     {
@@ -1160,7 +1158,7 @@ public:
             polylines[i].offset(offset);
         }
     }
-    virtual std::unique_ptr<Shape> clone() const override
+    std::unique_ptr<Shape> clone() const override
     {
         return svg::make_unique<LineChart>(*this);
     }
@@ -1228,7 +1226,7 @@ class Animation : public Serializeable, public Identifiable {
 public:
     Animation(const std::string &href, const std::string &begin, const std::string &fill, const std::string &dur)
         : href(href), begin(begin), fill(fill), dur(dur) { }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         if (href.empty()) {
             std::cerr << "warning: no <href> given for animation with id=\"" << getId() << "\"." << std::endl;
@@ -1260,13 +1258,13 @@ public:
                       const std::string &begin = {}, const std::string &fill = {},
                       const std::string &dur = {}, const std::string attribute_type = "CSS")
         : Animation(href, begin, fill, dur), to(to), attr_name(attribute_name), attr_type(attribute_type) { }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         if (attr_name.empty()) {
             std::cerr << "warning: no <attributeName> given for animation with id=\"" << getId() << "\"." << std::endl;
         }
         std::stringstream ss;
-        ss << elemStart("set") << Animation::toString(layout) << attribute("to", to)
+        ss << elemStart("set") << Animation::toString(l) << attribute("to", to)
            << attribute("attributeName", attr_name)  << attribute("attributeType", attr_type)
            << emptyElemEnd();
         return ss.str();
@@ -1286,13 +1284,13 @@ public:
     AnimateMotion(std::vector<Point> pts, const std::string &href,
                   const std::string &begin = {}, const std::string &fill = {},
                   const std::string &dur = {}) : Animation(href, begin, fill, dur), points(pts) { }
-    std::string toString(Layout const & layout) const override
+    std::string toString(Layout const & l) const override
     {
         if (points.empty()) {
             std::cerr << "warning: no <path> points given as animation path for id=\"" << getId() << "\"." << std::endl;
         }
         std::stringstream ss;
-        ss << elemStart("animateMotion") << Animation::toString(layout) << "path=";
+        ss << elemStart("animateMotion") << Animation::toString(l) << "path=";
         for (size_t i = 0; i < points.size(); ++i) {
             if (i == 0) {
                 ss << "\"M" << points[i].x << "," << points[i].y;
