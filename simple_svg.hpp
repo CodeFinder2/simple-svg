@@ -1316,7 +1316,7 @@ private:
 
 class Document {
 public:
-    Document(std::string const & file_name, Layout layout = Layout())
+    Document(Layout layout = Layout())
         : file_name(file_name), layout(layout), needs_sorting(false) { }
 
     Document & operator<<(Shape const & shape)
@@ -1337,19 +1337,28 @@ public:
         return ss.str();
     }
     bool isAnimated() const { return !animation_nodes.empty(); }
-    bool save(bool auto_append_extension = true)
+    /**
+     * \brief Stores the SVG into a file on disk
+     * \param [in] file_name File name (may already contain desired extension)
+     * \param [in] auto_append \c true to append the appropriate extension if not already present,
+     *             \c false to not change `file_name`
+     * \return \c true on success, \c false on failure
+     * \see getFileName()
+     */
+    bool save(const std::string &file_name, bool auto_append = true)
     {
-        if (auto_append_extension) {
-            // Append ".html" if not already given AND the document contains animations:
+        this->file_name = file_name;
+        // Append ".html" if not already given AND the document contains animations:
+        if (auto_append) {
             if (isAnimated()) {
-                if (!ends_with(file_name, ".html")) {
-                    file_name += ".html";
+                if (!ends_with(this->file_name, ".html")) {
+                    this->file_name += ".html";
                 }
-            } else if (!ends_with(file_name, ".svg")) {
-                file_name += ".svg";
+            } else if (!ends_with(this->file_name, ".svg")) {
+                this->file_name += ".svg";
             }
         }
-        std::ofstream ofs(file_name.c_str());
+        std::ofstream ofs(this->file_name.c_str());
         if (!ofs.is_open()) {
             return false;
         }
@@ -1357,6 +1366,12 @@ public:
         writeToStream(ofs);
         return ofs.good();
     }
+    /**
+     * \brief Returns the actual file name
+     * \return file name incl. extension used in `save()`
+     * \see save()
+     */
+    const std::string &getFileName() const { return file_name; }
     Layout getLayout() const { return layout; }
 protected:
     void writeToStream(std::ostream& str)
