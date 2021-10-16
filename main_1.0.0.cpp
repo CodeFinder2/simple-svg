@@ -39,7 +39,7 @@ using namespace svg;
 int main()
 {
     Dimensions dimensions(100, 100);
-    Document doc("my_svg.svg", Layout(dimensions, Layout::BottomLeft));
+    Document doc(Layout(dimensions, Layout::BottomLeft));
 
     // Red image border.
     Polygon border(Stroke(1, Color::Red));
@@ -76,5 +76,5 @@ int main()
 
     doc << Rectangle(Point(70, 55), 20, 15, Color::Yellow);
 
-    return !doc.save();
+    return !doc.save("my_svg.svg");
 }
