@@ -1316,8 +1316,7 @@ private:
 
 class Document {
 public:
-    Document(Layout layout = Layout())
-        : file_name(file_name), layout(layout), needs_sorting(false) { }
+    Document(Layout layout = Layout()) : layout(layout), needs_sorting(false) { }
 
     Document & operator<<(Shape const & shape)
     {
