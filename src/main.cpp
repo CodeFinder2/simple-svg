@@ -3,7 +3,8 @@
 *  The "New BSD License" : http://www.opensource.org/licenses/bsd-license.php  *
 ********************************************************************************
 
-Copyright (c) 2010, Mark Turney
+Copyright (c) 2010, Mark Turney,
+              2021, Adrian Böckenkamp
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,12 +31,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
 
-#include "simple_svg.hpp"
+#include <simple_svg/simple_svg.hpp>
 
 using namespace svg;
 
 // Demo page shows sample usage of the Simple SVG library.
-
 int main()
 {
     Dimensions dimensions(100, 100);

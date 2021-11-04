@@ -1,13 +1,20 @@
-project (simple-svg)
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.12)
+project("simple_svg" VERSION 1.0.0
+  DESCRIPTION "Easy to use SVG header only library for C++11"
+  HOMEPAGE_URL "https://github.com/CodeFinder2/simple-svg")
+include(GNUInstallDirs)
 
-add_executable(simple_svg main_1.0.0.cpp simple_svg.hpp)
+add_library(${PROJECT_NAME} INTERFACE)
+target_include_directories(
+  ${PROJECT_NAME}
+  INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_11)
 
-set_property(TARGET simple_svg PROPERTY CXX_STANDARD 11)
+option(SIMPLE_SVG_BUILD_EXAMPLE "Build the SimpleSVG example binary?" OFF)
+if (SIMPLE_SVG_BUILD_EXAMPLE)
+  add_executable(${PROJECT_NAME}_example src/main.cpp)
+  target_link_libraries(${PROJECT_NAME}_example ${PROJECT_NAME})
+endif()
 
-                     
-if(MSVC)
-   add_definitions(/D_CRT_SECURE_NO_WARNINGS)
-   add_definitions(/D_SCL_SECURE_NO_WARNINGS)
-   add_definitions(/DNOMINMAX)
-endif(MSVC)
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME} DESTINATION include)
