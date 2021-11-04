@@ -302,6 +302,7 @@ public:
           }
           assign(rand() % 256, rand() % 256, rand() % 256);
           break;
+        case Transparent: // fall through...
         default: transparent = true; break;
         }
     }
@@ -431,7 +432,7 @@ private:
 class Shape : public Serializeable, public Identifiable {
 public:
     Shape(Stroke const & stroke = Stroke(), int z_order = 0, const std::string& shape_id = {})
-        : z(z_order), stroke(stroke), Identifiable(shape_id) { }
+        : Identifiable(shape_id), z(z_order), stroke(stroke) { }
     virtual ~Shape() { }
     std::string toString(Layout const & l) const override
     {
@@ -497,7 +498,7 @@ public:
     {
         *this << shape;
     }
-    Marker(const Marker &that)
+    Marker(const Marker &that) : Identifiable(that.id)
     {
         shapes.reserve(that.shapes.size());
         for (size_t i = 0; i < that.shapes.size(); ++i) {
@@ -1226,7 +1227,7 @@ class Animation : public Serializeable, public Identifiable {
 public:
     Animation(const std::string &href, const std::string &begin, const std::string &fill, const std::string &dur)
         : href(href), begin(begin), fill(fill), dur(dur) { }
-    std::string toString(Layout const & l) const override
+    std::string toString(Layout const &) const override
     {
         if (href.empty()) {
             std::cerr << "warning: no <href> given for animation with id=\"" << getId() << "\"." << std::endl;
