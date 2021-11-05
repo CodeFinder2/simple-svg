@@ -98,8 +98,7 @@ inline bool equal(double a, double b, double eps = 1e-10) { return std::fabs(a -
 template <typename T>
 class optional {
 public:
-    optional<T>(T const & type)
-        : valid(true), type(type) { }
+    optional<T>(T const & value) : valid(true), type(value) { }
     optional<T>() : valid(false), type(T()) { }
     T* operator->()
     {
@@ -128,7 +127,7 @@ private:
 };
 
 struct Dimensions {
-    Dimensions(double width, double height) : width(width), height(height)
+    Dimensions(double w, double h) : width(w), height(h)
     {
         if (!valid_num(width) || !valid_num(height)) {
             std::cerr << "Infs or NaNs provided to svg::Dimensions()." << std::endl;
@@ -145,7 +144,7 @@ struct Dimensions {
 };
 
 struct Point {
-    Point(double x = 0, double y = 0) : x(x), y(y) { }
+    Point(double px = 0, double py = 0) : x(px), y(py) { }
     double x;
     double y;
 };
@@ -190,9 +189,9 @@ inline optional<Point> getMaxPoint(std::vector<Point> const & points)
 struct Layout {
     enum Origin { TopLeft, BottomLeft, TopRight, BottomRight };
 
-    Layout(Dimensions const & dimensions = Dimensions(400, 300), Origin origin = BottomLeft,
-        double scale = 1, Point const & origin_offset = Point(0, 0))
-        : dimensions(dimensions), scale(scale), origin(origin), origin_offset(origin_offset)
+    Layout(Dimensions const & dims = Dimensions(400, 300), Origin orig = BottomLeft,
+        double dim_scale = 1, Point const & orig_offset = Point(0, 0))
+        : dimensions(dims), scale(dim_scale), origin(orig), origin_offset(orig_offset)
     {
       if (!valid_num(scale) || !valid_num(origin_offset.x) || !valid_num(origin_offset.y)) {
           std::cerr << "Infs or NaNs provided to svg::Layout()." << std::endl;
@@ -328,15 +327,15 @@ private:
 
 class Fill : public Serializeable {
 public:
-    Fill(Color::Defaults color, double opacity_level = 1.0)
-        : color(color), opacity(opacity_level)
+    Fill(Color::Defaults fill_color, double opacity_level = 1.0)
+        : color(fill_color), opacity(opacity_level)
     {
         if (opacity_level < 0 || opacity_level > 1) {
             std::cerr << "Fill::Fill(): opacity_level=" << opacity_level << " is out of range [0,1]." << std::endl;
         }
     }
-    Fill(Color color = Color::Transparent)
-        : color(color), opacity(1.0) { }
+    Fill(Color fill_color = Color::Transparent)
+        : color(fill_color), opacity(1.0) { }
     std::string toString(Layout const & l) const
     {
         std::stringstream ss;
@@ -353,10 +352,10 @@ private:
 
 class Stroke : public Serializeable {
 public:
-    Stroke(double width = -1, Color color = Color::Transparent, bool nonScalingStroke = false,
+    Stroke(double w = -1, Color stroke_color = Color::Transparent, bool nonScalingStroke = false,
            double stroke_miterlimit = -1, std::vector<unsigned> stroke_dasharray = {},
            unsigned int stroke_dashoffset = 0, double stroke_opacity = 1.0)
-        : width(width), color(color), nonScaling(nonScalingStroke),
+        : width(w), color(stroke_color), nonScaling(nonScalingStroke),
           miterlimit(stroke_miterlimit), dasharray(stroke_dasharray),
           dashoffset(stroke_dashoffset), opacity(stroke_opacity)
     {
@@ -412,7 +411,8 @@ private:
 
 class Font : public Serializeable {
 public:
-    Font(double size = 12, std::string const & family = "Verdana") : size(size), family(family) { }
+    Font(double font_size = 12, std::string const & font_family = "Verdana")
+        : size(font_size), family(font_family) { }
     std::string toString(Layout const & l) const
     {
         std::stringstream ss;
@@ -431,8 +431,8 @@ private:
 // All SVG entities (shapes) than have a stroke (that is, Line, Polyline, and all listed for "SurfaceShape")
 class Shape : public Serializeable, public Identifiable {
 public:
-    Shape(Stroke const & stroke = Stroke(), int z_order = 0, const std::string& shape_id = {})
-        : Identifiable(shape_id), z(z_order), stroke(stroke) { }
+    Shape(Stroke const & stroke_style = Stroke(), int z_order = 0, const std::string& shape_id = {})
+        : Identifiable(shape_id), z(z_order), stroke(stroke_style) { }
     virtual ~Shape() { }
     std::string toString(Layout const & l) const override
     {
@@ -474,8 +474,8 @@ protected:
 // All SVG entities (shapes) that can be filled (that is, Circle, Ellipse, Rectangle, Polygon, Path, and Text)
 class SurfaceShape : public Shape {
 public:
-    SurfaceShape(Fill const & fill = Fill(), Stroke const & stroke = Stroke(), int z_order = 0, const std::string& shape_id = {})
-        : Shape(stroke, z_order, shape_id), fill(fill) { }
+    SurfaceShape(Fill const & fill_style = Fill(), Stroke const & stroke_style = Stroke(), int z_order = 0, const std::string& shape_id = {})
+        : Shape(stroke_style, z_order, shape_id), fill(fill_style) { }
     std::string toString(Layout const & l) const override
     {
         return Shape::toString(l) + fill.toString(l);
@@ -702,9 +702,9 @@ inline std::string vectorToString(std::vector<T> collection, Layout const & layo
 
 class Circle : public SurfaceShape {
 public:
-    Circle(Point const & center, double diameter, Fill const & fill,
-           Stroke const & stroke = Stroke())
-        : SurfaceShape(fill, stroke), center(center), radius(diameter / 2)
+    Circle(Point const & center_pos, double diameter, Fill const & fill_style,
+           Stroke const & stroke_style = Stroke())
+        : SurfaceShape(fill_style, stroke_style), center(center_pos), radius(diameter / 2)
     {
         if (!valid_num(center.x) || !valid_num(center.y) || !valid_num(diameter)) {
             std::cerr << "Infs or NaNs provided to svg::Circle()." << std::endl;
@@ -739,9 +739,9 @@ private:
 
 class Elipse : public SurfaceShape {
 public:
-    Elipse(Point const & center, double width, double height,
-        Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-        : SurfaceShape(fill, stroke), center(center), radius_width(width / 2.0),
+    Elipse(Point const & center_pos, double width, double height,
+        Fill const & fill_style = Fill(), Stroke const & stroke_style = Stroke())
+        : SurfaceShape(fill_style, stroke_style), center(center_pos), radius_width(width / 2.0),
           radius_height(height / 2.0)
     {
         if (!valid_num(center.x) || !valid_num(center.y) || !valid_num(width) || !valid_num(height)) {
@@ -787,9 +787,10 @@ public:
      * \param [in] fill Fill style used to fill the rectangular area
      * \param [in] stroke Stroke used to create the boundary contour
      */
-    Rectangle(Point const & edge, double width, double height,
-        Fill const & fill = Fill(), Stroke const & stroke = Stroke(), double rx = 0.0, double ry = 0.0)
-        : SurfaceShape(fill, stroke), edge(edge), width(width), height(height), rx(rx), ry(ry)
+    Rectangle(Point const & upper_left_corner, double w, double h, Fill const & fill_style = Fill(),
+              Stroke const & stroke_style = Stroke(), double rx_corner = 0.0, double ry_corner = 0.0)
+        : SurfaceShape(fill_style, stroke_style), edge(upper_left_corner), width(w), height(h), rx(rx_corner),
+          ry(ry_corner)
     {
         if (!valid_num(edge.x) || !valid_num(edge.y) || !valid_num(width) || !valid_num(height) ||
             !valid_num(rx) || !valid_num(ry)) {
@@ -839,9 +840,8 @@ private:
 
 class Line : public Shape, public Markerable {
 public:
-    Line(Point const & start_point, Point const & end_point, Stroke const & stroke = Stroke())
-        : Shape(stroke), start_point(start_point),
-          end_point(end_point)
+    Line(Point const & start_pt, Point const & end_pt, Stroke const & stroke_style = Stroke())
+        : Shape(stroke_style), start_point(start_pt), end_point(end_pt)
     {
         if (!valid_num(start_point.x) || !valid_num(start_point.y) ||
             !valid_num(end_point.x) || !valid_num(end_point.y)) {
@@ -881,10 +881,10 @@ private:
 
 class Polygon : public SurfaceShape {
 public:
-    Polygon(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-        : SurfaceShape(fill, stroke) { }
-    Polygon(const std::vector<Point> &pts, Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-        : SurfaceShape(fill, stroke), points(pts)
+    Polygon(Fill const & fill_style = Fill(), Stroke const & stroke_style = Stroke())
+        : SurfaceShape(fill_style, stroke_style) { }
+    Polygon(const std::vector<Point> &pts, Fill const & fill_style = Fill(), Stroke const & stroke_style = Stroke())
+        : SurfaceShape(fill_style, stroke_style), points(pts)
     {
         for (size_t i = 0; i < pts.size(); ++i) {
             if (!valid_num(pts[i].x) || !valid_num(pts[i].y)) {
@@ -893,7 +893,7 @@ public:
             }
         }
     }
-    Polygon(Stroke const & stroke = Stroke()) : SurfaceShape(Color::Transparent, stroke) { }
+    Polygon(Stroke const & stroke_style = Stroke()) : SurfaceShape(Color::Transparent, stroke_style) { }
     Polygon & operator<<(Point const & point)
     {
         if (!valid_num(point.x) || !valid_num(point.y)) {
@@ -936,11 +936,11 @@ private:
 
 class Path : public SurfaceShape {
 public:
-    Path(Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-        : SurfaceShape(fill, stroke)
+    Path(Fill const & fill_style = Fill(), Stroke const & stroke_style = Stroke())
+        : SurfaceShape(fill_style, stroke_style)
     { startNewSubPath(); }
-    Path(std::vector<Point> const & pts, Fill const & fill = Fill(), Stroke const & stroke = Stroke())
-        : SurfaceShape(fill, stroke)
+    Path(std::vector<Point> const & pts, Fill const & fill_style = Fill(), Stroke const & stroke_style = Stroke())
+        : SurfaceShape(fill_style, stroke_style)
     {
         for (size_t i = 0; i < pts.size(); ++i) {
             if (!valid_num(pts[i].x) || !valid_num(pts[i].y)) {
@@ -951,7 +951,7 @@ public:
         startNewSubPath();
         paths.back() = pts;
     }
-    Path(Stroke const & stroke = Stroke()) : SurfaceShape(Color::Transparent, stroke)
+    Path(Stroke const & stroke_style = Stroke()) : SurfaceShape(Color::Transparent, stroke_style)
     {  startNewSubPath(); }
     Path & operator<<(Point const & point)
     {
@@ -1012,9 +1012,9 @@ private:
 
 class Polyline : public Shape, public Markerable {
 public:
-    Polyline(Stroke const & stroke = Stroke()) : Shape(stroke) { }
-    Polyline(std::vector<Point> const & pts, Stroke const & stroke = Stroke())
-        : Shape(stroke), points(pts)
+    Polyline(Stroke const & stroke_style = Stroke()) : Shape(stroke_style) { }
+    Polyline(std::vector<Point> const & pts, Stroke const & stroke_style = Stroke())
+        : Shape(stroke_style), points(pts)
     {
         for (size_t i = 0; i < pts.size(); ++i) {
             if (!valid_num(pts[i].x) || !valid_num(pts[i].y)) {
@@ -1067,10 +1067,10 @@ enum class TextAnchor { Start, Middle, End, None };
 
 class Text : public SurfaceShape {
 public:
-    Text(Point const & origin, std::string const & content, Fill const & fill = Fill(),
-         Font const & font = Font(), Stroke const & stroke = Stroke(),
+    Text(Point const & origin_pos, std::string const & text_content, Fill const & fill_style = Fill(),
+         Font const & font_style = Font(), Stroke const & stroke_style = Stroke(),
          TextAnchor align = TextAnchor::None)
-        : SurfaceShape(fill, stroke), origin(origin), content(content), font(font),
+        : SurfaceShape(fill_style, stroke_style), origin(origin_pos), content(text_content), font(font_style),
           anchor(align)
     {
         if (!valid_num(origin.x) || !valid_num(origin.y)) {
@@ -1125,9 +1125,9 @@ private:
 // FIXME: this design is bad since "Polyline::points" needs to be public (in contrast to all other classes)...
 class LineChart : public Shape {
 public:
-    LineChart(Dimensions margin = Dimensions(),
-              Stroke const & axis_stroke = Stroke(0.5, Color::Purple))
-        : axis_stroke(axis_stroke), margin(margin) { }
+    LineChart(Dimensions chart_margin = Dimensions(),
+              Stroke const & axis_stroke_style = Stroke(0.5, Color::Purple))
+        : axis_stroke(axis_stroke_style), margin(chart_margin) { }
     LineChart & operator<<(Polyline const & polyline)
     {
         if (polyline.points.empty()) {
@@ -1225,8 +1225,8 @@ namespace animation {
 
 class Animation : public Serializeable, public Identifiable {
 public:
-    Animation(const std::string &href, const std::string &begin, const std::string &fill, const std::string &dur)
-        : href(href), begin(begin), fill(fill), dur(dur) { }
+    Animation(const std::string &href_id, const std::string &ani_begin, const std::string &fill_style, const std::string &duration)
+        : href(href_id), begin(ani_begin), fill(fill_style), dur(duration) { }
     std::string toString(Layout const &) const override
     {
         if (href.empty()) {
@@ -1255,10 +1255,10 @@ protected:
 
 class SetAttributeValue : public Animation {
 public:
-    SetAttributeValue(const std::string &to, const std::string &attribute_name, const std::string &href,
-                      const std::string &begin = {}, const std::string &fill = {},
-                      const std::string &dur = {}, const std::string attribute_type = "CSS")
-        : Animation(href, begin, fill, dur), to(to), attr_name(attribute_name), attr_type(attribute_type) { }
+    SetAttributeValue(const std::string &ani_to, const std::string &attribute_name, const std::string &href_id,
+                      const std::string &ani_begin = {}, const std::string &fill_style = {},
+                      const std::string &duration = {}, const std::string attribute_type = "CSS")
+        : Animation(href_id, ani_begin, fill_style, duration), to(ani_to), attr_name(attribute_name), attr_type(attribute_type) { }
     std::string toString(Layout const & l) const override
     {
         if (attr_name.empty()) {
@@ -1282,9 +1282,9 @@ private:
 
 class AnimateMotion : public Animation {
 public:
-    AnimateMotion(std::vector<Point> pts, const std::string &href,
-                  const std::string &begin = {}, const std::string &fill = {},
-                  const std::string &dur = {}) : Animation(href, begin, fill, dur), points(pts) { }
+    AnimateMotion(std::vector<Point> pts, const std::string &href_id,
+                  const std::string &ani_begin = {}, const std::string &fill_style = {},
+                  const std::string &duration = {}) : Animation(href_id, ani_begin, fill_style, duration), points(pts) { }
     std::string toString(Layout const & l) const override
     {
         if (points.empty()) {
@@ -1317,7 +1317,7 @@ private:
 
 class Document {
 public:
-    Document(Layout layout = Layout()) : layout(layout), needs_sorting(false) { }
+    Document(Layout doc_layout = Layout()) : layout(doc_layout), needs_sorting(false) { }
 
     Document & operator<<(Shape const & shape)
     {
@@ -1339,26 +1339,26 @@ public:
     bool isAnimated() const { return !animation_nodes.empty(); }
     /**
      * \brief Stores the SVG into a file on disk
-     * \param [in] file_name File name (may already contain desired extension)
+     * \param [in] filename File name (may already contain desired extension)
      * \param [in] auto_append \c true to append the appropriate extension if not already present,
      *             \c false to not change `file_name`
      * \return \c true on success, \c false on failure
      * \see getFileName()
      */
-    bool save(const std::string &file_name, bool auto_append = true)
+    bool save(const std::string &filename, bool auto_append = true)
     {
-        this->file_name = file_name;
+        file_name = filename;
         // Append ".html" if not already given AND the document contains animations:
         if (auto_append) {
             if (isAnimated()) {
-                if (!ends_with(this->file_name, ".html")) {
-                    this->file_name += ".html";
+                if (!ends_with(file_name, ".html")) {
+                    file_name += ".html";
                 }
-            } else if (!ends_with(this->file_name, ".svg")) {
-                this->file_name += ".svg";
+            } else if (!ends_with(file_name, ".svg")) {
+                file_name += ".svg";
             }
         }
-        std::ofstream ofs(this->file_name.c_str());
+        std::ofstream ofs(file_name.c_str());
         if (!ofs.is_open()) {
             return false;
         }

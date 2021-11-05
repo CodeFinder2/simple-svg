@@ -15,6 +15,7 @@ option(SIMPLE_SVG_BUILD_EXAMPLE "Build the SimpleSVG example binary?" OFF)
 if (SIMPLE_SVG_BUILD_EXAMPLE)
   add_executable(${PROJECT_NAME}_example src/main.cpp)
   target_link_libraries(${PROJECT_NAME}_example ${PROJECT_NAME})
+  target_compile_options(${PROJECT_NAME}_example PRIVATE -Wall -Wextra -Werror -pedantic -Wshadow)
 endif()
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME} DESTINATION include)
