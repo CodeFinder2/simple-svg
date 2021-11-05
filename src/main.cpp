@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
 
-#include <simple_svg/simple_svg.hpp>
+#include <svg_writer/svg_writer.hpp>
 
 using namespace svg;
 

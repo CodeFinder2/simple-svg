@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
-project("simple_svg" VERSION 1.0.0
-  DESCRIPTION "Easy to use SVG header only library for C++11"
+project("svg_writer" VERSION 1.0.0
+  DESCRIPTION "Header-only library for C++11 to write SVG images programmatically"
   HOMEPAGE_URL "https://github.com/CodeFinder2/simple-svg")
 include(GNUInstallDirs)
 

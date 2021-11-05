@@ -29,8 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
 
-#ifndef SIMPLE_SVG_HPP
-#define SIMPLE_SVG_HPP
+#ifndef SVG_WRITER_HPP
+#define SVG_WRITER_HPP
 
 #include <vector>
 #include <string>
@@ -49,7 +49,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace svg {
 
 // Version information.
-inline std::string libraryName()    { return "SimpleSVG"; }
+inline std::string libraryName()    { return "svg-writer"; }
 inline std::string libraryVersion() { return "1.0.0"; }
 inline std::string svgVersion()     { return "1.1"; }
 
@@ -1377,7 +1377,7 @@ protected:
     void writeToStream(std::ostream& str)
     {
         str << "<?xml " << attribute("version", "1.0") << attribute("standalone", "no") << "?>\n"
-            << "<!-- Generator: " << libraryName() << " (https://github.com/CodeFinder2/simple-svg), Version: " << libraryVersion() << " -->\n"
+            << "<!-- Generator: " << libraryName() << " (https://github.com/CodeFinder2/svg-writer), Version: " << libraryVersion() << " -->\n"
             << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG " << svgVersion() << "//EN\" "
             << "\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n<svg "
             << attribute("width", layout.dimensions.width, "px")
@@ -1437,4 +1437,4 @@ protected:
 
 } // end of namespace: svg
 
-#endif // SIMPLE_SVG_HPP
+#endif // SVG_WRITER_HPP
