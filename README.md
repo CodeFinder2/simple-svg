@@ -4,7 +4,7 @@
 This project creates files that can then be viewed by applications like [Inkscape](https://inkscape.org/) or [Mozilla Firefox](https://www.mozilla.org/en-US/firefox/new/). An example can be found in `src/main.cpp`.
 
 # Alternatives
-Here's a quick list of alternative libraries which may fit your needs better than this library:
+Here's a quick list of alternative libraries which may also fit your needs:
 - [svg_plot](https://github.com/pabristow/svg_plot): more about plotting data like time series, sin, cos, etc.
 - [libboard](https://github.com/c-koi/libboard): drawing with output support for SVG/EPS/FIG with a large number of primitives
 - [quicksvg](https://github.com/NAThompson/quicksvg): plots time series, graphs functions, and plots ULP accuracy - that's it
