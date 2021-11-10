@@ -1,7 +1,7 @@
 # Overview
 *svg-writer* is a header-only library for C++11 to write SVG images programmatically, including basic support for animations.
 
-This project creates files that can then be viewed by a applications like [Inkscape](https://inkscape.org/). An example can be found in `src/main.cpp`.
+This project creates files that can then be viewed by applications like [Inkscape](https://inkscape.org/) or [Mozilla Firefox](https://www.mozilla.org/en-US/firefox/new/). An example can be found in `src/main.cpp`.
 
 # Alternatives
 Here's a quick list of alternative libraries which may fit your needs better than this library:
