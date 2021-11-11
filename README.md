@@ -3,6 +3,8 @@
 
 This project creates files that can then be viewed by applications like [Inkscape](https://inkscape.org/) or [Mozilla Firefox](https://www.mozilla.org/en-US/firefox/new/). An example can be found in `src/main.cpp`.
 
+Here's an [example for an animation](./images/animation_example.html).
+
 # Alternatives
 Here's a quick list of alternative libraries which may also fit your needs:
 - [svg_plot](https://github.com/pabristow/svg_plot): more about plotting data like time series, sin, cos, etc.
