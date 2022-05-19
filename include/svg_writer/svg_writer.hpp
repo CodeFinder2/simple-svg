@@ -1065,13 +1065,19 @@ public:
 // None will not create any extra SVG/XML and equals "Start" (the default).
 enum class TextAnchor { Start, Middle, End, None };
 
+// None equals "auto", see https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/dominant-baseline
+enum class DominantBaseline { TextBottom, Alphabetic, Ideographic, Middle, Central, Mathematical, Hanging, TextTop, None };
+
 class Text : public SurfaceShape {
 public:
+    /**
+     * \brief Construct a new Text object which is x/y centered on default
+     */
     Text(Point const & origin_pos, std::string const & text_content, Fill const & fill_style = Fill(),
          Font const & font_style = Font(), Stroke const & stroke_style = Stroke(),
-         TextAnchor align = TextAnchor::None)
+         TextAnchor align = TextAnchor::Middle, DominantBaseline baseline = DominantBaseline::Middle)
         : SurfaceShape(fill_style, stroke_style), origin(origin_pos), content(text_content), font(font_style),
-          anchor(align)
+          anchor(align), dominant_baseline(baseline)
     {
         if (!valid_num(origin.x) || !valid_num(origin.y)) {
             std::cerr << "Infs or NaNs provided to svg::Text()." << std::endl;
@@ -1092,6 +1098,26 @@ public:
         case TextAnchor::End:
             ss << attribute("text-anchor", "end"); break;
         case TextAnchor::None:
+            break;
+        }
+        switch (dominant_baseline) {
+        case DominantBaseline::TextBottom:
+            ss << attribute("dominant-baseline", "text-bottom"); break;
+        case DominantBaseline::Alphabetic:
+            ss << attribute("dominant-baseline", "alphabetic"); break;
+        case DominantBaseline::Ideographic:
+            ss << attribute("dominant-baseline", "ideographic"); break;
+        case DominantBaseline::Middle:
+            ss << attribute("dominant-baseline", "middle"); break;
+        case DominantBaseline::Central:
+            ss << attribute("dominant-baseline", "central"); break;
+        case DominantBaseline::Mathematical:
+            ss << attribute("dominant-baseline", "mathematical"); break;
+        case DominantBaseline::Hanging:
+            ss << attribute("dominant-baseline", "hanging"); break;
+        case DominantBaseline::TextTop:
+            ss << attribute("dominant-baseline", "text-top"); break;
+        case DominantBaseline::None:
             break;
         }
         ss << attribute("x", translateX(origin.x, l))
@@ -1117,6 +1143,7 @@ private:
     std::string content;
     Font font;
     TextAnchor anchor;
+    DominantBaseline dominant_baseline;
 };
 
 // TODO: allow "text with background" via filters, see https://stackoverflow.com/a/31013492
