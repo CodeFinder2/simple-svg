@@ -1342,7 +1342,7 @@ private:
 
 } // end of namespace: animation (within namespace "svg")
 
-class Document {
+class Document : public Identifiable {
 public:
     Document(Layout doc_layout = Layout()) : layout(doc_layout), needs_sorting(false) { }
 
@@ -1407,6 +1407,7 @@ protected:
             << "<!-- Generator: " << libraryName() << " (https://github.com/CodeFinder2/svg-writer), Version: " << libraryVersion() << " -->\n"
             << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG " << svgVersion() << "//EN\" "
             << "\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n<svg "
+            << serializeId()
             << attribute("width", layout.dimensions.width, "px")
             << attribute("height", layout.dimensions.height, "px")
             << attribute("xmlns", "http://www.w3.org/2000/svg")

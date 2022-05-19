@@ -76,5 +76,7 @@ int main()
 
     doc << Rectangle(Point(70, 55), 20, 15, Color::Yellow);
 
+    doc.setId("mySvg"); // optional
+
     return !doc.save("my_svg.svg");
 }
