@@ -644,7 +644,7 @@ private:
 };
 
 namespace internal {
-    auto compareMarker = [](const Marker *a, const Marker *b) { return a->getId() < b->getId(); };
+    inline auto compareMarker = [](const Marker *a, const Marker *b) { return a->getId() < b->getId(); };
     typedef std::set<const Marker*, decltype(compareMarker)> MarkerSet;
 }
 
